@@ -17,8 +17,26 @@ const { Server } = require("socket.io");
 const app = express();
 const server = http.createServer(app);
 
+// Orígenes permitidos para CORS. Por defecto "*" para que el frontend pueda estar
+// en GitHub Pages (u otro dominio) y conectarse a este servidor. Se puede restringir
+// con la variable de entorno CORS_ORIGIN (una URL o varias separadas por comas).
+const CORS_ORIGIN = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((s) => s.trim())
+  : "*";
+
 // maxHttpBufferSize alto para permitir preguntas con imágenes (data URLs).
-const io = new Server(server, { maxHttpBufferSize: 1e7 });
+const io = new Server(server, {
+  maxHttpBufferSize: 1e7,
+  cors: { origin: CORS_ORIGIN, methods: ["GET", "POST"] },
+});
+
+// Cabeceras CORS también para las peticiones HTTP normales (p. ej. /salud).
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", CORS_ORIGIN === "*" ? "*" : req.headers.origin || "");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  if (req.method === "OPTIONS") return res.sendStatus(204);
+  next();
+});
 
 // Sirve el frontend estático (index.html, css/, js/).
 app.use(express.static(__dirname));

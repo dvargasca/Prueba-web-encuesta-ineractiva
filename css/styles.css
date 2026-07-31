@@ -651,6 +651,10 @@ button { font-family: inherit; }
 /* Bonus por racha en el feedback del modo solo */
 .feedback__streak { color: #ffe08a; }
 
+/* Enlace para configurar el servidor del modo en vivo (pie del inicio) */
+.server-link { color: var(--purple-500); font-weight: 600; text-decoration: underline; cursor: pointer; }
+.server-link:hover { color: var(--purple-700); }
+
 /* Reduce animaciones si el usuario lo prefiere */
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }

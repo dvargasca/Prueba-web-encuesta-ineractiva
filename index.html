@@ -19,11 +19,11 @@
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
   <!--
-    Cliente de Socket.IO: lo sirve el servidor Node en /socket.io/socket.io.js.
-    Si abres index.html como archivo o en un hosting estático, este script no
-    cargará y el modo EN VIVO se desactivará amablemente (el resto funciona igual).
+    Cliente de Socket.IO empaquetado localmente (ruta relativa) para que funcione
+    también en GitHub Pages. Así el modo EN VIVO puede conectarse a un servidor
+    remoto (Railway/Render) aunque la web esté alojada de forma estática.
   -->
-  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/vendor/socket.io.min.js"></script>
 
   <!-- Scripts (sin módulos ES para que funcione también al abrir el archivo localmente) -->
   <script src="js/storage.js"></script>

@@ -25,9 +25,25 @@ Cada acierto **consecutivo** suma un extra: **+100** al 2.º acierto seguido, **
 
 ## 🚀 Puesta en marcha
 
+> ### 📢 ¿Publicaste en GitHub Pages y el modo en vivo no funciona?
+> Es normal: **GitHub Pages solo sirve archivos estáticos y no puede ejecutar el
+> servidor Node** (ni WebSockets), que es lo que necesita el juego en tiempo real.
+> Tienes dos opciones:
+> 1. **La más simple:** despliega el proyecto en **Railway** (opción C) y usa **esa URL
+>    para todo** — sirve la web *y* el servidor. No necesitas GitHub Pages.
+> 2. **Conservar tu GitHub Pages:** despliega solo el servidor en Railway y, en tu web de
+>    GitHub Pages, pulsa **En vivo**: aparecerá una pantalla para **pegar la URL de tu
+>    servidor** (queda guardada). Tus estudiantes se unen abriendo **esa URL de Railway**
+>    (que también sirve la app), sin configurar nada. La dirección para ellos aparece en
+>    la pantalla del anfitrión.
+>
+> 💡 Truco: puedes preconfigurar el servidor añadiendo `?server=https://tu-servidor` al
+> final de la URL de tu web (p. ej. para un marcador).
+
 ### A) Solo el editor y el modo Solo (sin instalar nada)
 Abre **`index.html`** en tu navegador. Podrás crear cuestionarios y jugarlos en modo Solo.
-*(El modo En vivo estará desactivado porque necesita el servidor.)*
+Para el **modo En vivo** necesitas un servidor (opciones B, C o D); desde una web estática,
+la app te pedirá la dirección de tu servidor.
 
 ### B) Modo En vivo en tu computadora
 Necesitas [Node.js](https://nodejs.org) (versión 18 o superior).
@@ -142,7 +158,9 @@ Luego añade el certificado con [Certbot](https://certbot.eff.org/) (`certbot --
 │   ├── storage.js      # Guardado en localStorage
 │   ├── samples.js      # Cuestionario de ejemplo y plantillas
 │   ├── ui.js           # Utilidades de interfaz (incluye verdadero/falso)
-│   ├── live-common.js  # Utilidades del modo en vivo (cliente)
+│   ├── live-common.js  # Modo en vivo: conexión y URL del servidor (cliente)
+│   ├── vendor/
+│   │   └── socket.io.min.js  # Cliente de Socket.IO (empaquetado)
 │   ├── editor.js       # Editor de cuestionarios (opción múltiple y V/F)
 │   ├── game.js         # Motor del modo Solo (con bonus por racha)
 │   ├── host.js         # Vista del anfitrión (en vivo)

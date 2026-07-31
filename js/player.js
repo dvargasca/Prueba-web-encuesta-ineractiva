@@ -29,7 +29,7 @@
 
   function cleanup() {
     stopBar();
-    if (S && S.socket) { try { S.socket.removeAllListeners(); S.socket.disconnect(); } catch (e) {} }
+    if (S && S.socket) { try { S.socket.removeAllListeners(); S.socket.disconnect(); } catch (e) {} S.socket = null; }
   }
 
   function exit() {
@@ -37,6 +37,25 @@
     clearSession();
     cleanup();
     if (S && S.onExit) S.onExit();
+  }
+
+  /* ---------- Configurar servidor (cuando no se puede conectar) ---------- */
+  function showNeedsServer(error) {
+    cleanup();
+    Live.renderNeedsServer(S.root, el, {
+      error: error,
+      onConnect: function () { restart(); },
+      onExit: exit
+    });
+  }
+
+  function restart() {
+    cleanup();
+    S.exiting = false;
+    S.connectedOnce = false;
+    if (S.token) { renderStatus("📡", "Reconectando…", "Recuperando tu partida " + S.pin); connectAndBind(); }
+    else if (S.pendingName) { renderStatus("📡", "Conectando…", "Uniéndote a la partida " + S.pin); connectAndBind(); }
+    else { renderJoin(S.pin); }
   }
 
   function shell(children, topRight) {
@@ -56,8 +75,17 @@
     var socket = S.socket;
 
     socket.on("connect", function () {
+      S.connectedOnce = true;
       if (S.token) socket.emit("player:rejoin", { pin: S.pin, token: S.token }, onRejoinAck);
       else socket.emit("player:join", { pin: S.pin, name: S.pendingName }, onJoinAck);
+    });
+
+    socket.on("connect_error", function () {
+      // Si nunca hemos conectado y aún no hay sesión, seguramente falta configurar el servidor.
+      if (!S.connectedOnce && !S.token) {
+        showNeedsServer("No pudimos conectar con ese servidor. Revisa la dirección.");
+      }
+      // Si hay token (reintento de sesión), socket.io sigue reintentando solo.
     });
 
     socket.on("player:question", function (data) { renderQuestion(data); });
@@ -312,11 +340,12 @@
   /* ---------- API pública ---------- */
   function render(root, opts) {
     opts = opts || {};
+    S = { root: root, onExit: opts.onExit, socket: null, pin: opts.pin || "", token: null, name: "", pendingName: "", answered: false, barTimer: null, exiting: false, connectedOnce: false };
+
     if (!Live.isLiveAvailable()) {
-      Live.renderUnavailable(root, el, function () { if (opts.onExit) opts.onExit(); });
+      showNeedsServer("No se pudo cargar el cliente de conexión.");
       return;
     }
-    S = { root: root, onExit: opts.onExit, socket: null, pin: opts.pin || "", token: null, name: "", pendingName: "", answered: false, barTimer: null, exiting: false };
 
     var saved = loadSession();
     if (saved && saved.pin && saved.token) {

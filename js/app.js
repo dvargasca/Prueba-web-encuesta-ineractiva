@@ -40,6 +40,29 @@
     window.QuizPlayer.render(root, { pin: pin, onExit: goHome });
   }
 
+  function goServerConfig() {
+    window.scrollTo(0, 0);
+    window.Live.renderNeedsServer(root, el, {
+      onConnect: function () { toast("Servidor guardado.", "success"); goHome(); },
+      onExit: goHome
+    });
+  }
+
+  /** Línea informativa del servidor del modo en vivo (en el pie del inicio). */
+  function renderServerLine(node) {
+    if (!window.Live || !window.Live.isLiveAvailable()) return;
+    node.innerHTML = "";
+    if (window.Live.isConfigured()) {
+      node.appendChild(document.createTextNode("🔌 Servidor del modo en vivo: "));
+      node.appendChild(el("b", { text: window.Live.getServerUrl() }));
+      node.appendChild(document.createTextNode("  ·  "));
+      node.appendChild(el("a", { href: "#", class: "server-link", text: "cambiar", onClick: function (e) { e.preventDefault(); goServerConfig(); } }));
+    } else {
+      node.appendChild(document.createTextNode("🔌 Modo en vivo · "));
+      node.appendChild(el("a", { href: "#", class: "server-link", text: "conectar con un servidor remoto", onClick: function (e) { e.preventDefault(); goServerConfig(); } }));
+    }
+  }
+
   /* ---------- Acciones sobre cuestionarios ---------- */
 
   function duplicateQuiz(id) {
@@ -241,8 +264,12 @@
 
     var library = el("div", { class: "container library" }, [libraryHead, grid]);
 
+    var serverLine = el("p", { style: "margin-top:0.6rem; font-size:0.8rem; opacity:0.9;" });
+    renderServerLine(serverLine);
+
     var footer = el("div", { class: "container", style: "text-align:center; color:var(--ink-soft); padding:3rem 0 2rem; font-size:0.85rem;" }, [
-      el("p", { text: "QuizAula · Tus cuestionarios se guardan localmente en este navegador. Usa \"Exportar\" para hacer copias de seguridad o compartirlos." })
+      el("p", { text: "QuizAula · Tus cuestionarios se guardan localmente en este navegador. Usa \"Exportar\" para hacer copias de seguridad o compartirlos." }),
+      serverLine
     ]);
 
     var view = el("div", { class: "home" }, [topbar, hero, library, footer]);

@@ -15,12 +15,51 @@
 
   function cleanup() {
     if (S && S.ringTimer) { clearInterval(S.ringTimer); S.ringTimer = null; }
-    if (S && S.socket) { try { S.socket.removeAllListeners(); S.socket.disconnect(); } catch (e) {} }
+    if (S && S.socket) { try { S.socket.removeAllListeners(); S.socket.disconnect(); } catch (e) {} S.socket = null; }
   }
 
   function exit() {
     cleanup();
     if (S && S.onExit) S.onExit();
+  }
+
+  function showNeedsServer(error) {
+    cleanup();
+    Live.renderNeedsServer(S.root, el, {
+      error: error,
+      onConnect: function () { startConnection(); }, // reintenta con la nueva URL
+      onExit: exit
+    });
+  }
+
+  function startConnection() {
+    cleanup();
+    S.connectedOnce = false;
+    S.socket = Live.connect();
+    renderConnecting();
+    var socket = S.socket;
+
+    socket.on("connect", function () {
+      S.connectedOnce = true;
+      // Enviamos el cuestionario (con imágenes) para que el servidor gestione la partida.
+      socket.emit("host:create", { quiz: S.quiz }, function (res) {
+        if (!res || !res.ok) { toast((res && res.error) || "No se pudo crear la partida.", "error"); exit(); return; }
+        S.pin = res.pin;
+        renderLobby();
+      });
+    });
+
+    socket.on("connect_error", function () {
+      if (!S.connectedOnce) showNeedsServer("No pudimos conectar con ese servidor. Revisa la dirección e inténtalo de nuevo.");
+    });
+
+    socket.on("host:players", function (data) { S.players = data.players || []; updateLobby(); });
+    socket.on("host:question", function (data) { renderQuestion(data); });
+    socket.on("host:answers", function (data) { updateAnswered(data); });
+    socket.on("host:reveal", function (data) { renderReveal(data); });
+    socket.on("host:ended", function (data) { renderEnded(data); });
+    socket.on("host:info", function (data) { toast(data.message, ""); });
+    socket.on("disconnect", function () { /* el servidor cerró o se perdió la conexión */ });
   }
 
   /* ---------- Cabecera común ---------- */
@@ -294,15 +333,12 @@
 
   /* ---------- API pública ---------- */
   function render(root, quiz, callbacks) {
-    if (!Live.isLiveAvailable()) {
-      Live.renderUnavailable(root, el, function () { if (callbacks.onExit) callbacks.onExit(); });
-      return;
-    }
-
     S = {
       root: root,
       onExit: callbacks.onExit,
-      socket: Live.connect(),
+      quiz: quiz,
+      socket: null,
+      connectedOnce: false,
       pin: null,
       title: quiz.title,
       players: [],
@@ -311,32 +347,11 @@
       answeredCount: 0
     };
 
-    renderConnecting();
-
-    var socket = S.socket;
-
-    socket.on("connect", function () {
-      // Enviamos el cuestionario (con imágenes) para que el servidor gestione la partida.
-      socket.emit("host:create", { quiz: quiz }, function (res) {
-        if (!res || !res.ok) { toast((res && res.error) || "No se pudo crear la partida.", "error"); exit(); return; }
-        S.pin = res.pin;
-        renderLobby();
-      });
-    });
-
-    socket.on("connect_error", function () {
-      toast("No se pudo conectar con el servidor.", "error");
-      exit();
-    });
-
-    socket.on("host:players", function (data) { S.players = data.players || []; updateLobby(); });
-    socket.on("host:question", function (data) { renderQuestion(data); });
-    socket.on("host:answers", function (data) { updateAnswered(data); });
-    socket.on("host:reveal", function (data) { renderReveal(data); });
-    socket.on("host:ended", function (data) { renderEnded(data); });
-    socket.on("host:info", function (data) { toast(data.message, ""); });
-
-    socket.on("disconnect", function () { /* el servidor cerró o se perdió la conexión */ });
+    if (!Live.isLiveAvailable()) {
+      showNeedsServer("No se pudo cargar el cliente de conexión.");
+      return;
+    }
+    startConnection();
   }
 
   window.QuizHost = { render: render };
