@@ -8,6 +8,13 @@
   var SHAPES = ["▲", "◆", "●", "■"];
   var COLOR_NAMES = ["Rojo", "Azul", "Amarillo", "Verde"];
 
+  /** ¿Es una pregunta de verdadero/falso? */
+  function isTF(q) { return !!(q && q.type === "tf"); }
+  /** Forma que se muestra para la respuesta i (✓/✗ en verdadero-falso). */
+  function answerShape(q, i) { return isTF(q) ? (i === 0 ? "✓" : "✗") : SHAPES[i]; }
+  /** Clase de color extra para verdadero-falso (verde/rojo). */
+  function answerColorClass(q, i) { return isTF(q) ? (i === 0 ? "answer-btn--true" : "answer-btn--false") : ""; }
+
   /** Escapa texto para insertarlo de forma segura como HTML. */
   function escapeHtml(str) {
     return String(str == null ? "" : str)
@@ -115,6 +122,9 @@
   window.UI = {
     SHAPES: SHAPES,
     COLOR_NAMES: COLOR_NAMES,
+    isTF: isTF,
+    answerShape: answerShape,
+    answerColorClass: answerColorClass,
     escapeHtml: escapeHtml,
     el: el,
     toast: toast,

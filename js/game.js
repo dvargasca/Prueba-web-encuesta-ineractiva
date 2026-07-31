@@ -26,6 +26,11 @@
     return Math.round(points * (0.5 + 0.5 * frac));
   }
 
+  // Bonus por racha: +100 por cada acierto encadenado (desde el 2.º), con tope en +500.
+  function streakBonus(streak) {
+    return Math.min(Math.max(streak - 1, 0), 5) * 100;
+  }
+
   function detachKeys() {
     if (game && game.keyHandler) {
       document.removeEventListener("keydown", game.keyHandler);
@@ -85,6 +90,8 @@
     game.index = 0;
     game.score = 0;
     game.correctCount = 0;
+    game.streak = 0;
+    game.maxStreak = 0;
     renderQuestion();
   }
 
@@ -132,16 +139,17 @@
     }
     stageChildren.push(meta);
 
-    // Botones de respuesta
-    var answersGrid = el("div", { class: "answers-play", id: "answers-grid" });
+    // Botones de respuesta (con estilo propio si es verdadero/falso)
+    var tf = window.UI.isTF(q);
+    var answersGrid = el("div", { class: "answers-play" + (tf ? " answers-play--tf" : ""), id: "answers-grid" });
     q.answers.forEach(function (a, i) {
       var btn = el("button", {
-        class: "answer-btn",
-        "data-color": i,
+        class: "answer-btn " + window.UI.answerColorClass(q, i),
+        "data-color": tf ? null : i,
         "data-index": i,
         onClick: function () { pickAnswer(i); }
       }, [
-        el("span", { class: "shape", text: SHAPES[i] }),
+        el("span", { class: "shape", text: window.UI.answerShape(q, i) }),
         el("span", { class: "label", text: a.text }),
         el("span", { class: "mark" })
       ]);
@@ -200,14 +208,19 @@
     var chosen = q.answers[i];
     var isCorrect = !!chosen.correct;
 
-    var gained = 0;
+    var gained = 0, bonus = 0;
     if (isCorrect) {
-      gained = computeScore(Number(q.points) || 1000, game.timeLimit, remaining);
+      game.streak = (game.streak || 0) + 1;
+      if (game.streak > (game.maxStreak || 0)) game.maxStreak = game.streak;
+      bonus = streakBonus(game.streak);
+      gained = computeScore(Number(q.points) || 1000, game.timeLimit, remaining) + bonus;
       game.score += gained;
       game.correctCount += 1;
+    } else {
+      game.streak = 0;
     }
 
-    reveal(i, isCorrect, gained, remaining);
+    reveal(i, isCorrect, gained, remaining, false, bonus);
   }
 
   function timeout() {
@@ -215,10 +228,11 @@
     game.answered = true;
     clearTimer();
     detachKeys();
-    reveal(-1, false, 0, 0, true);
+    game.streak = 0;
+    reveal(-1, false, 0, 0, true, 0);
   }
 
-  function reveal(pickedIndex, isCorrect, gained, remaining, isTimeout) {
+  function reveal(pickedIndex, isCorrect, gained, remaining, isTimeout, bonus) {
     var q = game.quiz.questions[game.index];
     var grid = document.getElementById("answers-grid");
     if (grid) {
@@ -256,7 +270,8 @@
     } else if (isCorrect) {
       feedback = el("div", { class: "feedback good" }, [
         el("span", { text: "✅ ¡Correcto!" }),
-        el("small", { text: "+" + gained + " puntos" })
+        el("small", { text: "+" + gained + " puntos" }),
+        bonus > 0 ? el("small", { class: "feedback__streak", text: "🔥 Racha ×" + game.streak + " · +" + bonus + " de bonus" }) : null
       ]);
     } else {
       feedback = el("div", { class: "feedback bad" }, [
@@ -330,7 +345,11 @@
         el("div", { class: "stat" }, [
           el("div", { class: "stat__num", text: accuracy + "%" }),
           el("div", { class: "stat__label", text: "Precisión" })
-        ])
+        ]),
+        (game.maxStreak || 0) >= 2 ? el("div", { class: "stat" }, [
+          el("div", { class: "stat__num", text: "🔥" + game.maxStreak }),
+          el("div", { class: "stat__label", text: "Mejor racha" })
+        ]) : null
       ]),
       el("div", { class: "results__actions" }, [
         el("button", { class: "btn btn--success btn--lg", html: "🔁 Jugar de nuevo", onClick: function () { startQuestions(); } }),

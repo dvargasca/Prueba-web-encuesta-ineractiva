@@ -10,9 +10,10 @@
   }
 
   /** Crea una nueva conexión de socket al mismo origen. */
-  function connect() {
-    // reconnection: false para no reconectar como un socket "nuevo" (perdería el estado del juego).
-    return window.io({ reconnection: false });
+  function connect(opts) {
+    var base = { reconnection: false };
+    if (opts) for (var k in opts) if (Object.prototype.hasOwnProperty.call(opts, k)) base[k] = opts[k];
+    return window.io(base);
   }
 
   /** Pantalla amable cuando el modo en vivo no está disponible (web estática). */

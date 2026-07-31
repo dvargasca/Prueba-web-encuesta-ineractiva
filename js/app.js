@@ -253,11 +253,21 @@
 
   /* ---------- Arranque ---------- */
 
+  /** ¿Hay una sesión de jugador en vivo guardada? (para reconectar tras recargar). */
+  function hasLiveSession() {
+    try { return !!sessionStorage.getItem("quizaula_live_session"); } catch (e) { return false; }
+  }
+
   function boot() {
     // Sembrar el ejemplo la primera vez
     if (Storage.isEmpty() && !localStorage.getItem("quizaula_seeded")) {
       Storage.save(Samples.sampleQuiz());
       localStorage.setItem("quizaula_seeded", "1");
+    }
+    // Si el estudiante recargó a mitad de partida, retomamos su sesión en vivo.
+    if (window.Live && window.Live.isLiveAvailable() && hasLiveSession()) {
+      goJoin();
+      return;
     }
     renderHome();
   }

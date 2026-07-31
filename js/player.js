@@ -1,23 +1,40 @@
 /* =========================================================
    player.js — Vista del JUGADOR (el móvil del estudiante)
+   Con reconexión automática y restauración de sesión: si se cae
+   el internet o el estudiante recarga la página, vuelve a su sitio.
    ========================================================= */
 (function (window, document) {
   "use strict";
 
   var el = window.UI.el;
-  var SHAPES = window.UI.SHAPES;
   var COLOR_NAMES = window.UI.COLOR_NAMES;
   var toast = window.UI.toast;
   var Live = window.Live;
 
+  var SESSION_KEY = "quizaula_live_session";
   var S = null;
 
+  /* ---------- Sesión (sobrevive a una recarga de la pestaña) ---------- */
+  function saveSession() {
+    try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ pin: S.pin, token: S.token, name: S.name })); } catch (e) {}
+  }
+  function loadSession() {
+    try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null"); } catch (e) { return null; }
+  }
+  function clearSession() {
+    try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
+  }
+
+  function stopBar() { if (S && S.barTimer) { clearInterval(S.barTimer); S.barTimer = null; } }
+
   function cleanup() {
-    if (S && S.barTimer) { clearInterval(S.barTimer); S.barTimer = null; }
+    stopBar();
     if (S && S.socket) { try { S.socket.removeAllListeners(); S.socket.disconnect(); } catch (e) {} }
   }
 
   function exit() {
+    if (S) S.exiting = true;
+    clearSession();
     cleanup();
     if (S && S.onExit) S.onExit();
   }
@@ -30,6 +47,70 @@
         topRight || (S && S.name ? el("span", { class: "pill", text: "👤 " + S.name }) : null)
       ])
     ].concat(children));
+  }
+
+  /* ---------- Conexión ---------- */
+  function connectAndBind() {
+    if (S.socket) return;
+    S.socket = Live.connect({ reconnection: true, reconnectionAttempts: 20, reconnectionDelay: 700, reconnectionDelayMax: 3000 });
+    var socket = S.socket;
+
+    socket.on("connect", function () {
+      if (S.token) socket.emit("player:rejoin", { pin: S.pin, token: S.token }, onRejoinAck);
+      else socket.emit("player:join", { pin: S.pin, name: S.pendingName }, onJoinAck);
+    });
+
+    socket.on("player:question", function (data) { renderQuestion(data); });
+    socket.on("player:result", function (data) { renderResult(data); });
+    socket.on("player:wait", function (data) { renderStatus("⏳", "¡Ya casi!", (data && data.message) || "Espera a la siguiente pregunta."); });
+    socket.on("player:lobby", function () { renderLobby(); });
+    socket.on("player:ended", function (data) { renderEnded(data); });
+
+    socket.on("game:closed", function (data) {
+      clearSession();
+      stopBar();
+      renderStatus("👋", "Partida finalizada", (data && data.reason) || "");
+    });
+
+    socket.on("disconnect", function () {
+      if (S.exiting) return;
+      stopBar();
+      renderStatus("🔌", "Se perdió la conexión", "Reconectando automáticamente…");
+    });
+
+    // Cuando socket.io agota los reintentos.
+    if (socket.io && socket.io.on) {
+      socket.io.on("reconnect_failed", function () {
+        if (S.exiting) return;
+        renderStatus("📵", "Sin conexión", "No pudimos reconectar.", [
+          { label: "Reintentar", primary: true, onClick: function () { renderStatus("📡", "Reconectando…", "Recuperando tu partida " + S.pin); S.socket.connect(); } },
+          { label: "Salir", onClick: exit }
+        ]);
+      });
+    }
+  }
+
+  function onJoinAck(res) {
+    if (res && res.ok) {
+      S.token = res.token; S.name = res.name; saveSession();
+      renderLobby();
+    } else {
+      clearSession();
+      toast((res && res.error) || "No se pudo unir.", "error");
+      renderJoin(S.pin);
+    }
+  }
+
+  function onRejoinAck(res) {
+    if (res && res.ok) {
+      S.name = res.name; saveSession();
+      // El servidor envía el estado actual (pregunta/resultado/sala/fin) y eso pinta la pantalla.
+    } else {
+      // La sesión guardada ya no sirve (partida terminada o cerrada): volvemos al inicio.
+      clearSession(); S.token = null;
+      toast((res && res.error) || "Tu partida anterior ya no está disponible.", "");
+      exit();
+    }
   }
 
   /* ---------- Entrada: PIN + apodo ---------- */
@@ -68,51 +149,23 @@
   }
 
   function doJoin(pin, name) {
-    if (!S.socket) S.socket = Live.connect();
-    var socket = S.socket;
-    S.pin = pin;
-
+    S.pin = pin; S.pendingName = name; S.token = null;
     renderStatus("📡", "Conectando…", "Uniéndote a la partida " + pin);
-
-    var joined = false;
-
-    socket.on("connect", function () {
-      socket.emit("player:join", { pin: pin, name: name }, function (res) {
-        if (!res || !res.ok) {
-          toast((res && res.error) || "No se pudo unir.", "error");
-          renderJoin(pin);
-          return;
-        }
-        joined = true;
-        S.name = res.name;
-        S.title = res.title;
-        renderLobby();
-      });
-    });
-
-    socket.on("connect_error", function () { if (!joined) { toast("No se pudo conectar con el servidor.", "error"); renderJoin(pin); } });
-
-    socket.on("player:question", function (data) { renderQuestion(data); });
-    socket.on("player:result", function (data) { renderResult(data); });
-    socket.on("player:wait", function (data) { renderStatus("⏳", "¡Ya casi!", data.message || "Espera a la siguiente pregunta."); });
-    socket.on("player:ended", function (data) { renderEnded(data); });
-    socket.on("game:closed", function (data) {
-      toast((data && data.reason) || "La partida se cerró.", "");
-      renderStatus("👋", "Partida finalizada", (data && data.reason) || "");
-      if (S.barTimer) { clearInterval(S.barTimer); S.barTimer = null; }
-    });
-    socket.on("disconnect", function () { if (joined) renderStatus("🔌", "Desconectado", "Se perdió la conexión con el servidor."); });
+    connectAndBind();
+    // Si el socket ya estaba conectado (raro), fuerza el join.
+    if (S.socket && S.socket.connected) S.socket.emit("player:join", { pin: pin, name: name }, onJoinAck);
   }
 
   /* ---------- Pantalla de estado genérica ---------- */
-  function renderStatus(emoji, title, sub) {
+  function renderStatus(emoji, title, sub, actions) {
+    var btns = (actions || [{ label: "Salir", onClick: exit }]).map(function (a) {
+      return el("button", { class: "btn " + (a.primary ? "btn--light" : "btn--ghost"), text: a.label, onClick: a.onClick });
+    });
     var card = el("div", { class: "game-start__card" }, [
       el("div", { class: "game-start__emoji", text: emoji }),
       el("h2", { text: title }),
       sub ? el("p", { text: sub }) : null,
-      el("div", { style: "text-align:center;" }, [
-        el("button", { class: "btn btn--ghost", html: "Salir", onClick: exit })
-      ])
+      el("div", { style: "text-align:center; display:flex; gap:0.5rem; justify-content:center; flex-wrap:wrap;" }, btns)
     ]);
     S.root.innerHTML = "";
     S.root.appendChild(shell([el("div", { class: "game-start" }, [card])]));
@@ -132,17 +185,20 @@
 
   /* ---------- Pregunta (solo colores/formas) ---------- */
   function renderQuestion(data) {
-    S.answered = false;
+    S.answered = !!data.alreadyAnswered;
     S.current = data;
+    var tf = data.type === "tf";
 
-    var pad = el("div", { class: "answers-play player-pad", id: "player-pad" });
+    var pad = el("div", { class: "answers-play player-pad" + (tf ? " answers-play--tf" : ""), id: "player-pad" });
     data.answers.forEach(function (a, i) {
       pad.appendChild(el("button", {
-        class: "answer-btn", "data-color": i, "data-index": i,
-        "aria-label": (COLOR_NAMES[i] || "") + ": " + (a.text || ""),
+        class: "answer-btn " + window.UI.answerColorClass(data, i),
+        "data-color": tf ? null : i,
+        "data-index": i,
+        "aria-label": (tf ? (i === 0 ? "Verdadero" : "Falso") : (COLOR_NAMES[i] || "")) + ": " + (a.text || ""),
         onClick: function () { pick(i); }
       }, [
-        el("span", { class: "shape", text: SHAPES[i] }),
+        el("span", { class: "shape", text: window.UI.answerShape(data, i) }),
         el("span", { class: "label", text: a.text })
       ]));
     });
@@ -151,46 +207,51 @@
       el("div", { class: "progress" }, [el("div", { class: "progress__bar", id: "pbar", style: "width:100%" })]),
       el("div", { class: "player-q" }, [
         el("div", { class: "player-q__num", text: "Pregunta " + (data.index + 1) + " / " + data.total }),
-        el("div", { class: "player-q__hint", id: "player-hint", text: "Toca tu respuesta" })
+        el("div", { class: "player-q__hint", id: "player-hint", text: S.answered ? "✅ Respuesta enviada · espera…" : "Toca tu respuesta" })
       ]),
       pad
     ]);
     S.root.innerHTML = "";
     S.root.appendChild(view);
 
-    startBar(data.timeLimit);
+    if (S.answered) lockButtons(data.answeredIndex);
+    startBar(typeof data.remainingMs === "number" ? data.remainingMs : data.timeLimit * 1000, data.timeLimit * 1000);
   }
 
-  function startBar(timeLimit) {
-    if (S.barTimer) clearInterval(S.barTimer);
-    var deadline = Date.now() + timeLimit * 1000;
-    S.barTimer = setInterval(function () {
+  function startBar(remainingMs, totalMs) {
+    stopBar();
+    totalMs = totalMs || remainingMs || 1;
+    var deadline = Date.now() + Math.max(0, remainingMs);
+    function paint() {
       var remaining = Math.max(0, deadline - Date.now());
       var bar = document.getElementById("pbar");
-      if (bar) bar.style.width = (remaining / (timeLimit * 1000) * 100) + "%";
+      if (bar) bar.style.width = (remaining / totalMs * 100) + "%";
       if (remaining <= 0) {
-        clearInterval(S.barTimer); S.barTimer = null;
+        stopBar();
         if (!S.answered) lockAfterAnswer("⏰ Se acabó el tiempo", "Espera el resultado…");
       }
-    }, 100);
+    }
+    paint();
+    S.barTimer = setInterval(paint, 100);
+  }
+
+  function lockButtons(pickedIndex) {
+    var pad = document.getElementById("player-pad");
+    if (!pad) return;
+    var btns = pad.querySelectorAll(".answer-btn");
+    for (var b = 0; b < btns.length; b++) {
+      btns[b].disabled = true;
+      if (Number(btns[b].getAttribute("data-index")) === pickedIndex) btns[b].classList.add("is-picked");
+      else btns[b].classList.add("dimmed");
+    }
   }
 
   function pick(i) {
     if (S.answered) return;
     S.answered = true;
-    if (S.barTimer) { clearInterval(S.barTimer); S.barTimer = null; }
+    stopBar();
     S.socket.emit("player:answer", { index: i }, function () {});
-
-    // Marca la elegida y bloquea el resto.
-    var pad = document.getElementById("player-pad");
-    if (pad) {
-      var btns = pad.querySelectorAll(".answer-btn");
-      for (var b = 0; b < btns.length; b++) {
-        btns[b].disabled = true;
-        if (Number(btns[b].getAttribute("data-index")) === i) btns[b].classList.add("is-picked");
-        else btns[b].classList.add("dimmed");
-      }
-    }
+    lockButtons(i);
     var hint = document.getElementById("player-hint");
     if (hint) hint.textContent = "✅ Respuesta enviada · espera…";
   }
@@ -204,8 +265,7 @@
 
   /* ---------- Resultado personal ---------- */
   function renderResult(data) {
-    if (S.barTimer) { clearInterval(S.barTimer); S.barTimer = null; }
-
+    stopBar();
     var good = data.answered && data.correct;
     var emoji, title, cls;
     if (!data.answered) { emoji = "⏰"; title = "Sin respuesta"; cls = "timeout"; }
@@ -216,7 +276,7 @@
       el("div", { class: "result-card__emoji", text: emoji }),
       el("h2", { text: title }),
       good ? el("div", { class: "result-card__points", text: "+" + data.points + " puntos" }) : null,
-      data.streak > 1 && good ? el("div", { class: "result-card__streak", text: "🔥 Racha de " + data.streak }) : null,
+      (good && data.bonus > 0) ? el("div", { class: "result-card__streak", text: "🔥 Racha ×" + data.streak + " · +" + data.bonus + " de bonus" }) : null,
       el("div", { class: "result-card__rank" }, [
         el("span", { class: "result-card__pos", text: "#" + data.rank }),
         el("span", { text: " de " + data.totalPlayers + " · " + data.totalScore + " pts" })
@@ -256,8 +316,17 @@
       Live.renderUnavailable(root, el, function () { if (opts.onExit) opts.onExit(); });
       return;
     }
-    S = { root: root, onExit: opts.onExit, socket: null, pin: opts.pin || "", name: "", answered: false, barTimer: null };
-    renderJoin(opts.pin || "");
+    S = { root: root, onExit: opts.onExit, socket: null, pin: opts.pin || "", token: null, name: "", pendingName: "", answered: false, barTimer: null, exiting: false };
+
+    var saved = loadSession();
+    if (saved && saved.pin && saved.token) {
+      // El estudiante recargó o volvió: intentamos recuperar su partida.
+      S.pin = saved.pin; S.token = saved.token; S.name = saved.name || "";
+      renderStatus("📡", "Reconectando…", "Recuperando tu partida " + S.pin);
+      connectAndBind();
+    } else {
+      renderJoin(opts.pin || "");
+    }
   }
 
   window.QuizPlayer = { render: render };

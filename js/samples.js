@@ -16,10 +16,24 @@
     return {
       id: "it_" + Math.random().toString(36).slice(2, 9),
       text: "",
+      type: "multiple",
       image: null,
       timeLimit: 20,
       points: 1000,
       answers: [blankAnswer("", true), blankAnswer("", false), blankAnswer("", false), blankAnswer("", false)]
+    };
+  }
+
+  /** Crea una pregunta de verdadero/falso. */
+  function tfQuestion() {
+    return {
+      id: "it_" + Math.random().toString(36).slice(2, 9),
+      text: "",
+      type: "tf",
+      image: null,
+      timeLimit: 15,
+      points: 1000,
+      answers: [blankAnswer("Verdadero", true), blankAnswer("Falso", false)]
     };
   }
 
@@ -88,6 +102,7 @@
         {
           id: "s4",
           text: "El agua está compuesta por hidrógeno y oxígeno.",
+          type: "tf",
           image: null,
           timeLimit: 15,
           points: 1000,
@@ -117,6 +132,7 @@
     COVERS: COVERS,
     blankAnswer: blankAnswer,
     blankQuestion: blankQuestion,
+    tfQuestion: tfQuestion,
     blankQuiz: blankQuiz,
     sampleQuiz: sampleQuiz
   };

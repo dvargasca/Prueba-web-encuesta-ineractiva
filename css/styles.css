@@ -619,6 +619,38 @@ button { font-family: inherit; }
   .player-pad .answer-btn { min-height: 15vh; }
 }
 
+/* =========================================================
+   VERDADERO / FALSO, RACHAS Y RECONEXIÓN
+   ========================================================= */
+
+/* Botones de verdadero/falso (verde = ✓, rojo = ✗) */
+.answer-btn--true { background: var(--answer-green); box-shadow: 0 5px 0 var(--answer-green-dark); }
+.answer-btn--false { background: var(--answer-red); box-shadow: 0 5px 0 var(--answer-red-dark); }
+.answers-play--tf .answer-btn { justify-content: center; font-size: clamp(1.2rem, 3vw, 1.7rem); }
+.answers-play--tf .answer-btn .label { flex: 0 1 auto; }
+.answers-play--tf .answer-btn .shape { font-size: 1.9rem; }
+
+/* Barras del gráfico de distribución en verdadero/falso */
+.dist__bar--true { background: var(--answer-green); }
+.dist__bar--false { background: var(--answer-red); }
+.dist__shape--true { color: #4bd15f; }
+.dist__shape--false { color: var(--answer-red); }
+
+/* Jugador desconectado en la sala de espera */
+.player-chip.disconnected { opacity: 0.45; }
+
+/* Selector de tipo de pregunta (editor) */
+.type-toggle { display: inline-flex; border: 2px solid var(--border); border-radius: var(--radius); overflow: hidden; flex-wrap: wrap; }
+.type-toggle__btn { border: none; background: #fff; color: var(--ink-soft); font-weight: 700; padding: 0.55rem 1.1rem; cursor: pointer; font-size: 0.9rem; font-family: inherit; }
+.type-toggle__btn + .type-toggle__btn { border-left: 2px solid var(--border); }
+.type-toggle__btn.is-active { background: var(--purple-700); color: #fff; }
+
+/* Etiqueta fija (Verdadero/Falso) en las filas del editor */
+.answer-edit__fixed { flex: 1; color: #fff; font-weight: 800; padding: 0.5rem 0.2rem; min-width: 0; }
+
+/* Bonus por racha en el feedback del modo solo */
+.feedback__streak { color: #ffe08a; }
+
 /* Reduce animaciones si el usuario lo prefiere */
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }

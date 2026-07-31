@@ -85,7 +85,12 @@
       return;
     }
     S.players.forEach(function (p) {
-      wrap.appendChild(el("div", { class: "player-chip", text: p.name }));
+      var disconnected = p.connected === false;
+      wrap.appendChild(el("div", {
+        class: "player-chip" + (disconnected ? " disconnected" : ""),
+        title: disconnected ? "Se ha desconectado (puede volver)" : null,
+        text: (disconnected ? "🔌 " : "") + p.name
+      }));
     });
   }
 
@@ -123,10 +128,11 @@
       el("span", { class: "count-pill", id: "answered-pill", text: "0 respuestas" })
     ]));
 
-    var grid = el("div", { class: "answers-play answers-play--display", id: "answers-grid" });
+    var tf = data.type === "tf";
+    var grid = el("div", { class: "answers-play answers-play--display" + (tf ? " answers-play--tf" : ""), id: "answers-grid" });
     data.answers.forEach(function (a, i) {
-      grid.appendChild(el("button", { class: "answer-btn", "data-color": i, "data-index": i, disabled: "disabled" }, [
-        el("span", { class: "shape", text: SHAPES[i] }),
+      grid.appendChild(el("button", { class: "answer-btn " + window.UI.answerColorClass(data, i), "data-color": tf ? null : i, "data-index": i, disabled: "disabled" }, [
+        el("span", { class: "shape", text: window.UI.answerShape(data, i) }),
         el("span", { class: "label", text: a.text }),
         el("span", { class: "mark" })
       ]));
@@ -178,16 +184,19 @@
     S.lastReveal = data;
 
     var q = S.current;
+    var tf = window.UI.isTF(q);
     var maxCount = Math.max(1, Math.max.apply(null, data.distribution));
 
     var bars = el("div", { class: "dist" }, q.answers.map(function (a, i) {
       var isCorrect = data.correctIndexes.indexOf(i) >= 0;
       var h = Math.round(data.distribution[i] / maxCount * 100);
+      var barClass = "dist__bar" + (tf ? (i === 0 ? " dist__bar--true" : " dist__bar--false") : "");
+      var shapeClass = "dist__shape" + (tf ? (i === 0 ? " dist__shape--true" : " dist__shape--false") : "");
       return el("div", { class: "dist__col" + (isCorrect ? " is-correct" : "") }, [
         el("div", { class: "dist__count", text: data.distribution[i] }),
-        el("div", { class: "dist__bar", "data-color": i, style: "height:" + Math.max(6, h) + "%" }),
-        el("div", { class: "dist__shape", "data-color": i }, [
-          el("span", { text: SHAPES[i] }),
+        el("div", { class: barClass, "data-color": tf ? null : i, style: "height:" + Math.max(6, h) + "%" }),
+        el("div", { class: shapeClass, "data-color": tf ? null : i }, [
+          el("span", { text: window.UI.answerShape(q, i) }),
           isCorrect ? el("span", { class: "dist__check", text: " ✓" }) : null
         ])
       ]);

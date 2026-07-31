@@ -70,6 +70,34 @@
     renderQuestions();
   }
 
+  /* ---------- Tipo de pregunta ---------- */
+
+  function setType(qIndex, type) {
+    var q = state.quiz.questions[qIndex];
+    if ((q.type || "multiple") === type) return;
+    if (type === "tf") {
+      // Si la 2ª opción era la correcta, mantenemos "Falso" como correcta.
+      var falseCorrect = q.answers[1] && q.answers[1].correct && !(q.answers[0] && q.answers[0].correct);
+      q.type = "tf";
+      q.answers = [
+        Samples.blankAnswer("Verdadero", !falseCorrect),
+        Samples.blankAnswer("Falso", falseCorrect)
+      ];
+    } else {
+      q.type = "multiple";
+      if (q.answers.length < 2) {
+        q.answers = [Samples.blankAnswer("", true), Samples.blankAnswer("", false)];
+      }
+    }
+    renderQuestions();
+  }
+
+  // En verdadero/falso solo puede haber una respuesta correcta (comportamiento de radio).
+  function setTFCorrect(q, aIndex) {
+    q.answers.forEach(function (a, i) { a.correct = (i === aIndex); });
+    renderQuestions();
+  }
+
   /* ---------- Imagen ---------- */
 
   function handleImage(qIndex, file) {
@@ -124,32 +152,46 @@
   /* ---------- Render de una respuesta ---------- */
 
   function renderAnswerEditor(q, qIndex, a, aIndex) {
-    var textInput = el("input", {
-      type: "text",
-      value: a.text,
-      maxlength: 120,
-      placeholder: "Respuesta " + (aIndex + 1),
-      "aria-label": "Texto de la respuesta " + (aIndex + 1),
-      oninput: function (e) { a.text = e.target.value; }
-    });
+    var tf = window.UI.isTF(q);
+    // En verdadero/falso: Verdadero se pinta verde (3) y Falso rojo (0).
+    var colorIdx = tf ? (aIndex === 0 ? 3 : 0) : aIndex;
+    var shape = window.UI.answerShape(q, aIndex);
+
+    var textNode;
+    if (tf) {
+      textNode = el("span", { class: "answer-edit__fixed", text: a.text });
+    } else {
+      textNode = el("input", {
+        type: "text",
+        value: a.text,
+        maxlength: 120,
+        placeholder: "Respuesta " + (aIndex + 1),
+        "aria-label": "Texto de la respuesta " + (aIndex + 1),
+        oninput: function (e) { a.text = e.target.value; }
+      });
+    }
 
     var correctToggle = el("label", { class: "correct-toggle", title: "Marcar como correcta" }, [
       el("input", {
-        type: "checkbox",
+        type: tf ? "radio" : "checkbox",
+        name: tf ? ("correct-" + qIndex) : null,
         checked: a.correct ? "checked" : null,
-        "aria-label": "Marcar respuesta " + (aIndex + 1) + " como correcta",
-        onchange: function (e) { a.correct = e.target.checked; }
+        "aria-label": "Marcar como correcta",
+        onchange: function (e) {
+          if (tf) setTFCorrect(q, aIndex);
+          else a.correct = e.target.checked;
+        }
       }),
       "Correcta"
     ]);
 
     var children = [
-      el("span", { class: "shape", text: SHAPES[aIndex] }),
-      textInput,
+      el("span", { class: "shape", text: shape }),
+      textNode,
       correctToggle
     ];
 
-    if (q.answers.length > 2) {
+    if (!tf && q.answers.length > 2) {
       children.push(el("button", {
         class: "remove-answer",
         title: "Eliminar respuesta",
@@ -159,7 +201,7 @@
       }));
     }
 
-    return el("div", { class: "answer-edit", "data-color": aIndex }, children);
+    return el("div", { class: "answer-edit", "data-color": colorIdx }, children);
   }
 
   /* ---------- Render de una pregunta ---------- */
@@ -230,12 +272,31 @@
     }
     var imageField = el("div", { class: "field" }, imageControls);
 
-    var answersGrid = el("div", { class: "answers-edit" },
+    var tf = window.UI.isTF(q);
+
+    // Selector de tipo de pregunta
+    var typeToggle = el("div", { class: "field" }, [
+      el("label", { text: "Tipo de pregunta" }),
+      el("div", { class: "type-toggle" }, [
+        el("button", {
+          class: "type-toggle__btn" + (!tf ? " is-active" : ""),
+          html: "🔤 Opción múltiple",
+          onClick: function () { setType(index, "multiple"); }
+        }),
+        el("button", {
+          class: "type-toggle__btn" + (tf ? " is-active" : ""),
+          html: "✔️✘ Verdadero / Falso",
+          onClick: function () { setType(index, "tf"); }
+        })
+      ])
+    ]);
+
+    var answersGrid = el("div", { class: "answers-edit" + (tf ? " answers-edit--tf" : "") },
       q.answers.map(function (a, ai) { return renderAnswerEditor(q, index, a, ai); })
     );
 
     var answerActions = [];
-    if (q.answers.length < 4) {
+    if (!tf && q.answers.length < 4) {
       answerActions.push(el("button", {
         class: "btn btn--ghost btn--sm",
         text: "+ Añadir respuesta",
@@ -245,7 +306,7 @@
     answerActions.push(el("span", {
       class: "field hint",
       style: "margin:0.5rem 0 0; align-self:center;",
-      text: "Marca la casilla \"Correcta\" en la respuesta o respuestas válidas."
+      text: tf ? "Elige cuál es la respuesta correcta." : "Marca la casilla \"Correcta\" en la respuesta o respuestas válidas."
     }));
 
     var settingsRow = el("div", { class: "row" }, [
@@ -257,6 +318,7 @@
       head,
       questionField,
       imageField,
+      typeToggle,
       el("label", { text: "Respuestas", style: "font-weight:600; font-size:0.92rem;" }),
       answersGrid,
       el("div", { style: "display:flex; gap:0.6rem; flex-wrap:wrap; margin:0.6rem 0 1rem;" }, answerActions),
