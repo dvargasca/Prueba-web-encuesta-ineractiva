@@ -18,12 +18,22 @@
   <!-- Contenedor de notificaciones -->
   <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
+  <!--
+    Cliente de Socket.IO: lo sirve el servidor Node en /socket.io/socket.io.js.
+    Si abres index.html como archivo o en un hosting estático, este script no
+    cargará y el modo EN VIVO se desactivará amablemente (el resto funciona igual).
+  -->
+  <script src="/socket.io/socket.io.js"></script>
+
   <!-- Scripts (sin módulos ES para que funcione también al abrir el archivo localmente) -->
   <script src="js/storage.js"></script>
   <script src="js/samples.js"></script>
   <script src="js/ui.js"></script>
+  <script src="js/live-common.js"></script>
   <script src="js/editor.js"></script>
   <script src="js/game.js"></script>
+  <script src="js/host.js"></script>
+  <script src="js/player.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

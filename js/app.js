@@ -30,6 +30,16 @@
     window.QuizGame.render(root, quiz, { onExit: goHome });
   }
 
+  function goHostLive(quiz) {
+    window.scrollTo(0, 0);
+    window.QuizHost.render(root, quiz, { onExit: goHome });
+  }
+
+  function goJoin(pin) {
+    window.scrollTo(0, 0);
+    window.QuizPlayer.render(root, { pin: pin, onExit: goHome });
+  }
+
   /* ---------- Acciones sobre cuestionarios ---------- */
 
   function duplicateQuiz(id) {
@@ -130,8 +140,9 @@
     ]);
 
     var foot = el("div", { class: "quiz-card__foot" }, [
-      el("button", { class: "btn btn--success", html: "▶ Jugar", onClick: function () { goPlay(q); } }),
-      el("button", { class: "btn btn--ghost", html: "✏️ Editar", onClick: function () { goEditor(q); } }),
+      el("button", { class: "btn btn--success", html: "🎮 En vivo", title: "Anfitrión: los estudiantes se unen con un PIN", onClick: function () { goHostLive(q); } }),
+      el("button", { class: "btn btn--ghost", html: "▶ Solo", title: "Jugar en este dispositivo", onClick: function () { goPlay(q); } }),
+      el("button", { class: "btn btn--ghost btn--sm", title: "Editar", "aria-label": "Editar", text: "✏️", onClick: function () { goEditor(q); } }),
       el("button", { class: "btn btn--ghost btn--sm", title: "Duplicar", "aria-label": "Duplicar", text: "⧉", onClick: function () { duplicateQuiz(q.id); } }),
       el("button", { class: "btn btn--ghost btn--sm", title: "Exportar", "aria-label": "Exportar", text: "⬇", onClick: function () { exportQuiz(q.id); } }),
       el("button", { class: "btn btn--ghost btn--sm", title: "Eliminar", "aria-label": "Eliminar", text: "🗑", onClick: function () { deleteQuiz(q.id); } })
@@ -170,6 +181,23 @@
       ])
     ]);
 
+    // Caja para que los estudiantes se unan con un PIN
+    var joinPin = el("input", {
+      class: "joinbar__pin", type: "tel", inputmode: "numeric", maxlength: 6,
+      placeholder: "PIN del juego", "aria-label": "PIN del juego"
+    });
+    function submitJoin(e) {
+      if (e) e.preventDefault();
+      var pin = (joinPin.value || "").trim();
+      if (!/^\d{4,8}$/.test(pin)) { toast("Escribe el PIN que ves en la pantalla.", "error"); joinPin.focus(); return; }
+      goJoin(pin);
+    }
+    var joinBar = el("form", { class: "joinbar", onSubmit: submitJoin }, [
+      el("span", { class: "joinbar__label", text: "¿Eres estudiante?" }),
+      joinPin,
+      el("button", { class: "btn btn--light", type: "submit", html: "Entrar →" })
+    ]);
+
     // Héroe
     var hero = el("div", { class: "hero" }, [
       el("div", { class: "hero__shapes" }, [
@@ -179,12 +207,13 @@
         el("span", { class: "hero__shape", style: "top:64%; right:9%; font-size:3.2rem;", text: "■" })
       ]),
       el("div", { class: "container" }, [
+        joinBar,
         el("h1", { text: "Cuestionarios interactivos para tu clase" }),
-        el("p", { text: "Crea preguntas, proyéctalas y deja que tus estudiantes compitan contra el reloj. Todo se guarda en tu navegador." }),
+        el("p", { text: "Crea las preguntas, proyéctalas y deja que tus estudiantes se unan desde el móvil con un PIN y compitan en tiempo real." }),
         el("div", { class: "hero__cta" }, [
           el("button", { class: "btn btn--lg btn--light", html: "➕ Crear cuestionario", onClick: function () { goEditor(null); } }),
           quizzes.length
-            ? el("button", { class: "btn btn--lg", html: "▶ Jugar el primero", onClick: function () { goPlay(quizzes[0]); } })
+            ? el("button", { class: "btn btn--lg", html: "🎮 Jugar en vivo", onClick: function () { goHostLive(quizzes[0]); } })
             : null
         ])
       ])
@@ -240,5 +269,5 @@
   }
 
   // Exponer utilidades por si se quieren usar desde la consola
-  window.QuizApp = { goHome: goHome, goEditor: goEditor, goPlay: goPlay };
+  window.QuizApp = { goHome: goHome, goEditor: goEditor, goPlay: goPlay, goHostLive: goHostLive, goJoin: goJoin };
 })(window, document);

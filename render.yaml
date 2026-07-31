@@ -1,0 +1,15 @@
+# Despliegue con un clic en Render (https://render.com)
+# 1. Sube este repositorio a GitHub.
+# 2. En Render: New + → Blueprint → elige tu repositorio.
+# 3. Render leerá este archivo y creará el servicio. ¡Listo!
+services:
+  - type: web
+    name: quizaula
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /salud
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
