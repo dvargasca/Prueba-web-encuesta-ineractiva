@@ -4,15 +4,28 @@
 (function (window, document) {
   "use strict";
 
-  // Formas y nombres de los 4 colores icónicos (rojo, azul, amarillo, verde).
-  var SHAPES = ["▲", "◆", "●", "■"];
-  var COLOR_NAMES = ["Rojo", "Azul", "Amarillo", "Verde"];
+  // Nombres de los 4 colores de opción (para lectores de pantalla / aria).
+  // Las opciones se distinguen por COLOR (cuadrados), no por figuras.
+  var COLOR_NAMES = ["Frambuesa", "Cobalto", "Ámbar", "Esmeralda"];
+
+  /** Inicial del título para las portadas con monograma (sin emoji). */
+  function monogram(title) {
+    var m = String(title == null ? "" : title).trim().match(/[\p{L}\p{N}]/u);
+    return m ? m[0].toUpperCase() : "?";
+  }
+
+  // Colores de acento de las portadas (degradados definidos en el CSS).
+  var ACCENT_COUNT = 6;
+  /** Clase CSS del degradado de acento de una portada. Tolera valores antiguos. */
+  function coverAccentClass(cover) {
+    var n = Math.floor(Number(cover));
+    if (!isFinite(n) || n < 0 || n >= ACCENT_COUNT) n = 0;
+    return "cover-accent--" + n;
+  }
 
   /** ¿Es una pregunta de verdadero/falso? */
   function isTF(q) { return !!(q && q.type === "tf"); }
-  /** Forma que se muestra para la respuesta i (✓/✗ en verdadero-falso). */
-  function answerShape(q, i) { return isTF(q) ? (i === 0 ? "✓" : "✗") : SHAPES[i]; }
-  /** Clase de color extra para verdadero-falso (verde/rojo). */
+  /** Clase de color extra para verdadero-falso (verde = verdadero / rojo = falso). */
   function answerColorClass(q, i) { return isTF(q) ? (i === 0 ? "answer-btn--true" : "answer-btn--false") : ""; }
 
   /** Escapa texto para insertarlo de forma segura como HTML. */
@@ -120,10 +133,11 @@
   }
 
   window.UI = {
-    SHAPES: SHAPES,
     COLOR_NAMES: COLOR_NAMES,
+    ACCENT_COUNT: ACCENT_COUNT,
+    monogram: monogram,
+    coverAccentClass: coverAccentClass,
     isTF: isTF,
-    answerShape: answerShape,
     answerColorClass: answerColorClass,
     escapeHtml: escapeHtml,
     el: el,

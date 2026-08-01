@@ -1,11 +1,10 @@
 /* =========================================================
-   game.js — Motor de juego estilo Kahoot
+   game.js — Motor de juego (modo individual, sin conexión)
    ========================================================= */
 (function (window, document) {
   "use strict";
 
   var el = window.UI.el;
-  var SHAPES = window.UI.SHAPES;
 
   var RING_R = 32;
   var RING_C = 2 * Math.PI * RING_R;
@@ -21,7 +20,7 @@
   }
 
   function computeScore(points, timeLimit, remainingMs) {
-    // Kahoot: puntos completos si respondes al instante, bajando al 50 % al final.
+    // Puntuación completa si respondes al instante, bajando al 50 % al final.
     var frac = Math.max(0, Math.min(1, remainingMs / (timeLimit * 1000)));
     return Math.round(points * (0.5 + 0.5 * frac));
   }
@@ -53,14 +52,14 @@
 
     var startBtn = el("button", {
       class: "btn btn--lg btn--block",
-      html: "🚀 ¡Empezar!",
+      text: "¡Empezar!",
       onClick: startQuestions
     });
 
     nameInput.addEventListener("keydown", function (e) { if (e.key === "Enter") startQuestions(); });
 
     var card = el("div", { class: "game-start__card" }, [
-      el("div", { class: "game-start__emoji", text: game.quiz.cover || "🎯" }),
+      el("div", { class: "game-start__cover " + window.UI.coverAccentClass(game.quiz.cover), text: window.UI.monogram(game.quiz.title) }),
       el("h2", { text: game.quiz.title }),
       el("p", { text: game.quiz.questions.length + " pregunta" + (game.quiz.questions.length === 1 ? "" : "s") +
         (game.quiz.description ? " · " + game.quiz.description : "") }),
@@ -70,10 +69,10 @@
 
     var view = el("div", { class: "game" }, [
       el("div", { class: "game__top" }, [
-        el("button", { class: "btn btn--light btn--sm", html: "← Salir", onClick: exit }),
+        el("button", { class: "btn btn--light btn--sm", text: "← Salir", onClick: exit }),
         el("span", { class: "spacer" }),
         el("span", { class: "brand", style: "font-size:1.1rem;" }, [
-          el("span", { class: "brand__logo", text: "🎯" }), "QuizAula"
+          el("span", { class: "brand__logo", text: "Q" }), "QuizAula"
         ])
       ]),
       el("div", { class: "game-start" }, [card])
@@ -112,7 +111,7 @@
     var top = el("div", { class: "game__top" }, [
       el("span", { class: "pill", html: "Pregunta <strong>" + (game.index + 1) + "</strong> / " + total }),
       el("span", { class: "spacer" }),
-      el("span", { class: "pill", id: "score-pill", html: "⭐ <strong>" + game.score + "</strong>" })
+      el("span", { class: "pill", id: "score-pill", html: "<strong>" + game.score + "</strong> pts" })
     ]);
 
     // Progreso
@@ -149,7 +148,7 @@
         "data-index": i,
         onClick: function () { pickAnswer(i); }
       }, [
-        el("span", { class: "shape", text: window.UI.answerShape(q, i) }),
+        el("span", { class: "shape" }),
         el("span", { class: "label", text: a.text }),
         el("span", { class: "mark" })
       ]);
@@ -257,25 +256,25 @@
     }
 
     var scorePill = document.getElementById("score-pill");
-    if (scorePill) scorePill.innerHTML = "⭐ <strong>" + game.score + "</strong>";
+    if (scorePill) scorePill.innerHTML = "<strong>" + game.score + "</strong> pts";
 
     // Franja de feedback
     var stage = document.querySelector(".q-stage");
     var feedback;
     if (isTimeout) {
       feedback = el("div", { class: "feedback timeout" }, [
-        el("span", { text: "⏰ ¡Se acabó el tiempo!" }),
+        el("span", { text: "¡Se acabó el tiempo!" }),
         el("small", { text: "Sin puntos esta vez" })
       ]);
     } else if (isCorrect) {
       feedback = el("div", { class: "feedback good" }, [
-        el("span", { text: "✅ ¡Correcto!" }),
+        el("span", { text: "¡Correcto!" }),
         el("small", { text: "+" + gained + " puntos" }),
-        bonus > 0 ? el("small", { class: "feedback__streak", text: "🔥 Racha ×" + game.streak + " · +" + bonus + " de bonus" }) : null
+        bonus > 0 ? el("small", { class: "feedback__streak", text: "Racha ×" + game.streak + " · +" + bonus + " de bonus" }) : null
       ]);
     } else {
       feedback = el("div", { class: "feedback bad" }, [
-        el("span", { text: "❌ Incorrecto" }),
+        el("span", { text: "Incorrecto" }),
         el("small", { text: "La respuesta correcta está resaltada" })
       ]);
     }
@@ -286,7 +285,7 @@
     var nextBtn = el("button", {
       class: "btn btn--light btn--lg",
       style: "margin:1rem auto 0; display:block;",
-      html: isLast ? "🏁 Ver resultados" : "Siguiente pregunta →",
+      text: isLast ? "Ver resultados" : "Siguiente pregunta →",
       onClick: nextQuestion
     });
     if (stage) stage.appendChild(nextBtn);
@@ -320,16 +319,16 @@
     var pct = maxScore ? Math.round(game.score / maxScore * 100) : 0;
     var accuracy = total ? Math.round(game.correctCount / total * 100) : 0;
 
-    var emoji, message;
-    if (accuracy >= 90) { emoji = "🏆"; message = "¡Excelente! Dominas el tema."; }
-    else if (accuracy >= 70) { emoji = "🎉"; message = "¡Muy bien! Buen trabajo."; }
-    else if (accuracy >= 50) { emoji = "👍"; message = "Bien, pero se puede mejorar."; }
-    else { emoji = "💪"; message = "¡A repasar y volver a intentarlo!"; }
+    var badgeClass, message;
+    if (accuracy >= 90) { badgeClass = "result-badge--great"; message = "¡Excelente! Dominas el tema."; }
+    else if (accuracy >= 70) { badgeClass = "result-badge--good"; message = "¡Muy bien! Buen trabajo."; }
+    else if (accuracy >= 50) { badgeClass = "result-badge--ok"; message = "Bien, pero se puede mejorar."; }
+    else { badgeClass = "result-badge--low"; message = "¡A repasar y volver a intentarlo!"; }
 
     var name = (game.playerName || "").trim();
 
     var card = el("div", { class: "results__card" }, [
-      el("div", { class: "results__emoji", text: emoji }),
+      el("div", { class: "result-badge " + badgeClass }, [el("span", { text: accuracy + "%" })]),
       el("h2", { text: name ? "¡Bien hecho, " + name + "!" : "¡Terminado!", style: "margin:0.3rem 0;" }),
       el("div", { class: "results__score", text: game.score + " pts" }),
       el("p", { class: "results__msg", text: message }),
@@ -347,13 +346,13 @@
           el("div", { class: "stat__label", text: "Precisión" })
         ]),
         (game.maxStreak || 0) >= 2 ? el("div", { class: "stat" }, [
-          el("div", { class: "stat__num", text: "🔥" + game.maxStreak }),
+          el("div", { class: "stat__num", text: "×" + game.maxStreak }),
           el("div", { class: "stat__label", text: "Mejor racha" })
         ]) : null
       ]),
       el("div", { class: "results__actions" }, [
-        el("button", { class: "btn btn--success btn--lg", html: "🔁 Jugar de nuevo", onClick: function () { startQuestions(); } }),
-        el("button", { class: "btn btn--ghost btn--lg", html: "🏠 Inicio", onClick: exit })
+        el("button", { class: "btn btn--success btn--lg", text: "Jugar de nuevo", onClick: function () { startQuestions(); } }),
+        el("button", { class: "btn btn--ghost btn--lg", text: "Inicio", onClick: exit })
       ])
     ]);
 

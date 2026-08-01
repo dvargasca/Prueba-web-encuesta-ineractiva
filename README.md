@@ -1,8 +1,8 @@
 # 🎯 QuizAula
 
-Una aplicación web tipo **Kahoot** para crear y jugar **cuestionarios interactivos** con tus estudiantes. Tiene **dos modos**:
+Una aplicación web de **concursos de preguntas** para crear y jugar **cuestionarios interactivos** con tus estudiantes. Tiene **dos modos**:
 
-- **🎮 En vivo (multijugador):** proyectas la partida, muestras un **PIN** y tus estudiantes se unen **desde su celular** (sin crear cuenta) y compiten en tiempo real. *Tal cual Kahoot.*
+- **🎮 En vivo (multijugador):** proyectas la partida, muestras un **PIN** y tus estudiantes se unen **desde su celular** (sin crear cuenta) y compiten en tiempo real.
 - **▶ Solo:** juegas el cuestionario en un solo dispositivo, ideal para repaso individual.
 
 Todo se ejecuta con un pequeño **servidor Node** (incluido): guarda tus cuestionarios y protege
@@ -10,12 +10,12 @@ tu biblioteca con una **contraseña de profesor/a**, de modo que los estudiantes
 **entrar con el PIN y jugar** (no ven ni editan tus cuestionarios). Puedes ejecutarlo en tu
 computadora o publicarlo gratis en internet.
 
-![Hecho con Node.js, HTML, CSS y JavaScript](https://img.shields.io/badge/Hecho%20con-Node%20·%20HTML%20·%20CSS%20·%20JS-6a1fc0)
+![Hecho con Node.js, HTML, CSS y JavaScript](https://img.shields.io/badge/Hecho%20con-Node%20·%20HTML%20·%20CSS%20·%20JS-2d5bd6)
 
 ## ✨ Características
 
 - **Crear cuestionarios** con preguntas de **opción múltiple** (2 a 4 respuestas) o **verdadero/falso** (con estilo propio ✓/✗), **imagen opcional**, y **tiempo** y **puntos** por pregunta.
-- **Modo en vivo estilo Kahoot:** PIN de acceso, sala de espera con los apodos, botones de colores con las formas icónicas (▲ ◆ ● ■), temporizador sincronizado, **puntuación por velocidad y acierto**, **bonus por racha** (aciertos encadenados), gráfico de respuestas, **clasificación** entre preguntas y **podio final**.
+- **Modo en vivo en tiempo real:** PIN de acceso, sala de espera con los apodos, opciones diferenciadas por **color** (cuadros de color, con identidad propia y sin figuras), temporizador sincronizado, **puntuación por velocidad y acierto**, **bonus por racha** (aciertos encadenados), gráfico de respuestas, **clasificación** entre preguntas y **podio final**.
 - **Reconexión automática:** si a un estudiante se le cae el internet o **recarga la página**, vuelve a su sitio **sin perder la puntuación**.
 - **Acceso separado y protegido:** al abrir la dirección del juego, tus estudiantes **solo ven
   la pantalla para poner el PIN y jugar**. Tu biblioteca y el editor quedan detrás de una
@@ -29,7 +29,7 @@ computadora o publicarlo gratis en internet.
 - Incluye un **cuestionario de ejemplo** para empezar de inmediato.
 
 ### 🔥 ¿Cómo funciona el bonus por racha?
-Cada acierto **consecutivo** suma un extra: **+100** al 2.º acierto seguido, **+200** al 3.º… hasta **+500**. Fallar reinicia la racha. Así se premia mantener el ritmo, igual que en Kahoot.
+Cada acierto **consecutivo** suma un extra: **+100** al 2.º acierto seguido, **+200** al 3.º… hasta **+500**. Fallar reinicia la racha. Así se premia mantener el ritmo.
 
 ## 🚀 Puesta en marcha
 

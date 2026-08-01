@@ -136,11 +136,11 @@
 
     var fields = [pwInput];
     if (pw2Input) fields.push(pw2Input);
-    fields.push(el("button", { class: "btn btn--lg btn--block", type: "submit", style: "margin-top:1rem;", html: setup ? "Crear y entrar 🚀" : "Entrar 🚀" }));
+    fields.push(el("button", { class: "btn btn--lg btn--block", type: "submit", style: "margin-top:1rem;", text: setup ? "Crear y entrar" : "Entrar" }));
     fields.push(errorBox);
 
     var card = el("div", { class: "game-start__card" }, [
-      el("div", { class: "game-start__emoji", text: setup ? "🔐" : "🧑‍🏫" }),
+      el("div", { class: "status-badge" }),
       el("h2", { text: setup ? "Configura tu contraseña" : "Acceso de profesor/a" }),
       el("p", { text: setup
         ? "Es la primera vez. Crea una contraseña para proteger tus cuestionarios; solo tú la tendrás."
@@ -158,7 +158,7 @@
     var view = el("div", { class: "game" }, [
       el("div", { class: "game-start" }, [
         el("div", { class: "student__brand" }, [
-          el("span", { class: "brand__logo", text: "🎯" }),
+          el("span", { class: "brand__logo", text: "Q" }),
           el("span", { text: "QuizAula" })
         ]),
         card,
@@ -176,12 +176,12 @@
     if (!window.Live || !window.Live.isLiveAvailable()) return;
     node.innerHTML = "";
     if (window.Live.isConfigured()) {
-      node.appendChild(document.createTextNode("🔌 Servidor del modo en vivo: "));
+      node.appendChild(document.createTextNode("Servidor del modo en vivo: "));
       node.appendChild(el("b", { text: window.Live.getServerUrl() }));
       node.appendChild(document.createTextNode("  ·  "));
       node.appendChild(el("a", { href: "#", class: "server-link", text: "cambiar", onClick: function (e) { e.preventDefault(); goServerConfig(); } }));
     } else {
-      node.appendChild(document.createTextNode("🔌 Modo en vivo · "));
+      node.appendChild(document.createTextNode("Modo en vivo · "));
       node.appendChild(el("a", { href: "#", class: "server-link", text: "conectar con un servidor remoto", onClick: function (e) { e.preventDefault(); goServerConfig(); } }));
     }
   }
@@ -275,8 +275,8 @@
   function quizCard(q) {
     var count = (q.questions || []).length;
 
-    var cover = el("div", { class: "quiz-card__cover" }, [
-      el("span", { text: q.cover || "🎯" }),
+    var cover = el("div", { class: "quiz-card__cover " + UI.coverAccentClass(q.cover) }, [
+      el("span", { class: "quiz-card__mono", text: UI.monogram(q.title) }),
       el("span", { class: "quiz-card__badge", text: count + (count === 1 ? " pregunta" : " preguntas") })
     ]);
 
@@ -286,12 +286,12 @@
     ]);
 
     var foot = el("div", { class: "quiz-card__foot" }, [
-      el("button", { class: "btn btn--success", html: "🎮 En vivo", title: "Anfitrión: los estudiantes se unen con un PIN", onClick: function () { goHostLive(q); } }),
-      el("button", { class: "btn btn--ghost", html: "▶ Solo", title: "Jugar en este dispositivo", onClick: function () { goPlay(q); } }),
-      el("button", { class: "btn btn--ghost btn--sm", title: "Editar", "aria-label": "Editar", text: "✏️", onClick: function () { goEditor(q); } }),
-      el("button", { class: "btn btn--ghost btn--sm", title: "Duplicar", "aria-label": "Duplicar", text: "⧉", onClick: function () { duplicateQuiz(q.id); } }),
-      el("button", { class: "btn btn--ghost btn--sm", title: "Exportar", "aria-label": "Exportar", text: "⬇", onClick: function () { exportQuiz(q.id); } }),
-      el("button", { class: "btn btn--ghost btn--sm", title: "Eliminar", "aria-label": "Eliminar", text: "🗑", onClick: function () { deleteQuiz(q.id); } })
+      el("button", { class: "btn btn--success", text: "En vivo", title: "Anfitrión: los estudiantes se unen con un PIN", onClick: function () { goHostLive(q); } }),
+      el("button", { class: "btn btn--ghost", text: "Solo", title: "Jugar en este dispositivo", onClick: function () { goPlay(q); } }),
+      el("button", { class: "btn btn--ghost btn--sm", title: "Editar", "aria-label": "Editar", text: "Editar", onClick: function () { goEditor(q); } }),
+      el("button", { class: "btn btn--ghost btn--sm", title: "Duplicar", "aria-label": "Duplicar", text: "Duplicar", onClick: function () { duplicateQuiz(q.id); } }),
+      el("button", { class: "btn btn--ghost btn--sm", title: "Exportar", "aria-label": "Exportar", text: "Exportar", onClick: function () { exportQuiz(q.id); } }),
+      el("button", { class: "btn btn--ghost btn--sm", title: "Eliminar", "aria-label": "Eliminar", text: "Eliminar", onClick: function () { deleteQuiz(q.id); } })
     ]);
 
     return el("div", { class: "quiz-card" }, [cover, body, foot]);
@@ -314,11 +314,11 @@
 
     var form = el("form", { class: "student__form", onSubmit: submit }, [
       pinInput,
-      el("button", { class: "btn btn--lg btn--block", type: "submit", style: "margin-top:1rem;", html: "Entrar 🚀" })
+      el("button", { class: "btn btn--lg btn--block", type: "submit", style: "margin-top:1rem;", text: "Entrar" })
     ]);
 
     var card = el("div", { class: "game-start__card" }, [
-      el("div", { class: "game-start__emoji", text: "🎮" }),
+      el("div", { class: "status-badge" }),
       el("h2", { text: "Unirse al juego" }),
       el("p", { text: "Escribe el PIN que aparece en la pantalla de tu profesor/a para entrar." }),
       form
@@ -335,7 +335,7 @@
     var view = el("div", { class: "game" }, [
       el("div", { class: "game-start" }, [
         el("div", { class: "student__brand" }, [
-          el("span", { class: "brand__logo", text: "🎯" }),
+          el("span", { class: "brand__logo", text: "Q" }),
           el("span", { text: "QuizAula" })
         ]),
         card,
@@ -364,17 +364,14 @@
     var topbar = el("div", { class: "topbar" }, [
       el("div", { class: "container topbar__inner" }, [
         el("button", { class: "brand", onClick: goHome }, [
-          el("span", { class: "brand__logo", text: "🎯" }),
+          el("span", { class: "brand__logo", text: "Q" }),
           el("span", { text: "QuizAula" })
         ]),
         el("span", { class: "topbar__spacer" }),
         el("div", { class: "topbar__actions" }, [
-          el("button", { class: "btn btn--sm topbar__exit", title: "Cerrar sesión de profesor/a", onClick: logoutTeacher },
-            [el("span", { text: "👋 " }), el("span", { class: "txt", text: "Salir" })]),
-          el("button", { class: "btn btn--light btn--sm", onClick: function () { importInput.click(); } },
-            [el("span", { text: "⬆ " }), el("span", { class: "txt", text: "Importar" })]),
-          el("button", { class: "btn btn--sm", onClick: function () { goEditor(null); } },
-            [el("span", { text: "➕ " }), el("span", { class: "txt", text: "Crear" })])
+          el("button", { class: "btn btn--sm topbar__exit", title: "Cerrar sesión de profesor/a", text: "Salir", onClick: logoutTeacher }),
+          el("button", { class: "btn btn--light btn--sm", text: "Importar", onClick: function () { importInput.click(); } }),
+          el("button", { class: "btn btn--sm", text: "Crear", onClick: function () { goEditor(null); } })
         ]),
         importInput
       ])
@@ -400,19 +397,19 @@
     // Héroe
     var hero = el("div", { class: "hero" }, [
       el("div", { class: "hero__shapes" }, [
-        el("span", { class: "hero__shape", style: "top:12%; left:8%; font-size:3rem;", text: "▲" }),
-        el("span", { class: "hero__shape", style: "top:60%; left:14%; font-size:2.4rem;", text: "◆" }),
-        el("span", { class: "hero__shape", style: "top:22%; right:12%; font-size:2.8rem;", text: "●" }),
-        el("span", { class: "hero__shape", style: "top:64%; right:9%; font-size:3.2rem;", text: "■" })
+        el("span", { class: "hero__shape", "data-color": "0", style: "top:12%; left:8%;" }),
+        el("span", { class: "hero__shape", "data-color": "1", style: "top:60%; left:14%;" }),
+        el("span", { class: "hero__shape", "data-color": "2", style: "top:22%; right:12%;" }),
+        el("span", { class: "hero__shape", "data-color": "3", style: "top:64%; right:9%;" })
       ]),
       el("div", { class: "container" }, [
         joinBar,
         el("h1", { text: "Cuestionarios interactivos para tu clase" }),
         el("p", { text: "Crea las preguntas, proyéctalas y deja que tus estudiantes se unan desde el móvil con un PIN y compitan en tiempo real." }),
         el("div", { class: "hero__cta" }, [
-          el("button", { class: "btn btn--lg btn--light", html: "➕ Crear cuestionario", onClick: function () { goEditor(null); } }),
+          el("button", { class: "btn btn--lg btn--light", text: "Crear cuestionario", onClick: function () { goEditor(null); } }),
           quizzes.length
-            ? el("button", { class: "btn btn--lg", html: "🎮 Jugar en vivo", onClick: function () { goHostLive(quizzes[0]); } })
+            ? el("button", { class: "btn btn--lg", text: "Jugar en vivo", onClick: function () { goHostLive(quizzes[0]); } })
             : null
         ])
       ])
@@ -422,7 +419,7 @@
     var libraryHead = el("div", { class: "library__head" }, [
       el("h2", { text: "Mis cuestionarios" }),
       el("div", { class: "library__tools" }, [
-        quizzes.length ? el("button", { class: "btn btn--light btn--sm", html: "⬇ Exportar todos", onClick: exportAll }) : null
+        quizzes.length ? el("button", { class: "btn btn--light btn--sm", text: "Exportar todos", onClick: exportAll }) : null
       ])
     ]);
 
@@ -431,10 +428,10 @@
       grid = el("div", { class: "quiz-grid" }, quizzes.map(quizCard));
     } else {
       grid = el("div", { class: "empty" }, [
-        el("div", { class: "empty__emoji", text: "📝" }),
+        el("div", { class: "empty__mark" }),
         el("h3", { text: "Aún no tienes cuestionarios" }),
         el("p", { text: "Crea tu primer cuestionario o importa uno que ya tengas." }),
-        el("button", { class: "btn btn--lg", html: "➕ Crear mi primer cuestionario", style: "margin-top:0.8rem;", onClick: function () { goEditor(null); } })
+        el("button", { class: "btn btn--lg", text: "Crear mi primer cuestionario", style: "margin-top:0.8rem;", onClick: function () { goEditor(null); } })
       ]);
     }
 
