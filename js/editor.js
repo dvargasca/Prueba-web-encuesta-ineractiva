@@ -5,7 +5,6 @@
   "use strict";
 
   var el = window.UI.el;
-  var SHAPES = window.UI.SHAPES;
   var toast = window.UI.toast;
   var confirm = window.UI.confirm;
   var Samples = window.QuizSamples;
@@ -153,9 +152,6 @@
 
   function renderAnswerEditor(q, qIndex, a, aIndex) {
     var tf = window.UI.isTF(q);
-    // En verdadero/falso: Verdadero se pinta verde (3) y Falso rojo (0).
-    var colorIdx = tf ? (aIndex === 0 ? 3 : 0) : aIndex;
-    var shape = window.UI.answerShape(q, aIndex);
 
     var textNode;
     if (tf) {
@@ -186,7 +182,7 @@
     ]);
 
     var children = [
-      el("span", { class: "shape", text: shape }),
+      el("span", { class: "shape" }),
       textNode,
       correctToggle
     ];
@@ -201,7 +197,9 @@
       }));
     }
 
-    return el("div", { class: "answer-edit", "data-color": colorIdx }, children);
+    // En verdadero/falso: Verdadero = verde, Falso = rojo (clases propias).
+    var rowClass = "answer-edit" + (tf ? (aIndex === 0 ? " answer-edit--true" : " answer-edit--false") : "");
+    return el("div", { class: rowClass, "data-color": tf ? null : aIndex }, children);
   }
 
   /* ---------- Render de una pregunta ---------- */
@@ -231,8 +229,8 @@
       el("span", { class: "spacer" }),
       el("button", { class: "icon-btn", title: "Subir", "aria-label": "Mover pregunta arriba", text: "↑", onClick: function () { moveQuestion(index, -1); } }),
       el("button", { class: "icon-btn", title: "Bajar", "aria-label": "Mover pregunta abajo", text: "↓", onClick: function () { moveQuestion(index, 1); } }),
-      el("button", { class: "icon-btn", title: "Duplicar", "aria-label": "Duplicar pregunta", text: "⧉", onClick: function () { duplicateQuestion(index); } }),
-      el("button", { class: "icon-btn", title: "Eliminar", "aria-label": "Eliminar pregunta", text: "🗑", onClick: function () { removeQuestion(index); } })
+      el("button", { class: "icon-btn", title: "Duplicar", "aria-label": "Duplicar pregunta", text: "❏", onClick: function () { duplicateQuestion(index); } }),
+      el("button", { class: "icon-btn", title: "Eliminar", "aria-label": "Eliminar pregunta", text: "✕", onClick: function () { removeQuestion(index); } })
     ]);
 
     var questionField = el("div", { class: "field" }, [
@@ -265,7 +263,7 @@
       });
       var pickBtn = el("button", {
         class: "btn btn--ghost btn--sm",
-        text: "🖼 Añadir imagen (opcional)",
+        text: "Añadir imagen (opcional)",
         onClick: function () { fileInput.click(); }
       });
       imageControls.push(fileInput, pickBtn);
@@ -280,12 +278,12 @@
       el("div", { class: "type-toggle" }, [
         el("button", {
           class: "type-toggle__btn" + (!tf ? " is-active" : ""),
-          html: "🔤 Opción múltiple",
+          text: "Opción múltiple",
           onClick: function () { setType(index, "multiple"); }
         }),
         el("button", {
           class: "type-toggle__btn" + (tf ? " is-active" : ""),
-          html: "✔️✘ Verdadero / Falso",
+          text: "Verdadero / Falso",
           onClick: function () { setType(index, "tf"); }
         })
       ])
@@ -310,8 +308,8 @@
     }));
 
     var settingsRow = el("div", { class: "row" }, [
-      el("div", { class: "field" }, [el("label", { text: "⏱ Tiempo límite" }), timeSelect]),
-      el("div", { class: "field" }, [el("label", { text: "⭐ Puntos" }), pointsSelect])
+      el("div", { class: "field" }, [el("label", { text: "Tiempo límite" }), timeSelect]),
+      el("div", { class: "field" }, [el("label", { text: "Puntos" }), pointsSelect])
     ]);
 
     return el("div", { class: "q-card" }, [
@@ -335,23 +333,30 @@
     });
   }
 
-  /* ---------- Selector de portada (emoji) ---------- */
+  /* ---------- Selector de color de acento de la portada ---------- */
 
   function renderCoverPicker() {
-    var current = el("span", { style: "font-size:2rem;", text: state.quiz.cover || "🎯" });
-    var palette = el("div", { style: "display:flex; flex-wrap:wrap; gap:0.35rem; margin-top:0.4rem;" },
-      Samples.COVERS.map(function (emoji) {
-        return el("button", {
-          class: "btn btn--ghost btn--sm",
-          style: "padding:0.3rem 0.5rem; font-size:1.2rem;" + (state.quiz.cover === emoji ? " border-color:var(--purple-500);" : ""),
-          text: emoji,
-          onClick: function () { state.quiz.cover = emoji; current.textContent = emoji; renderCoverPickerRefresh(); }
-        });
-      })
-    );
+    var preview = el("div", {
+      id: "cover-mono",
+      class: "accent-preview " + window.UI.coverAccentClass(state.quiz.cover),
+      text: window.UI.monogram(state.quiz.title)
+    });
+
+    var swatches = el("div", { class: "accent-swatches" });
+    for (var i = 0; i < window.UI.ACCENT_COUNT; i++) {
+      (function (idx) {
+        swatches.appendChild(el("button", {
+          type: "button",
+          class: "accent-swatch cover-accent--" + idx + (Number(state.quiz.cover) === idx ? " is-active" : ""),
+          "aria-label": "Color de portada " + (idx + 1),
+          onClick: function () { state.quiz.cover = idx; renderCoverPickerRefresh(); }
+        }));
+      })(i);
+    }
+
     return el("div", { class: "field" }, [
-      el("label", { html: "Icono del cuestionario " + '<span class="hint">(portada)</span>' }),
-      el("div", { style: "display:flex; align-items:center; gap:0.8rem;" }, [current, palette])
+      el("label", { html: "Color de la portada " + '<span class="hint">(se muestra con la inicial del título)</span>' }),
+      el("div", { class: "accent-picker" }, [preview, swatches])
     ]);
   }
 
@@ -368,7 +373,7 @@
     if (!state.quiz.questions || !state.quiz.questions.length) {
       state.quiz.questions = [Samples.blankQuestion()];
     }
-    if (!state.quiz.cover) state.quiz.cover = "🎯";
+    if (state.quiz.cover == null || isNaN(Number(state.quiz.cover))) state.quiz.cover = 0;
     state.onExit = callbacks.onExit;
     state.onSaved = callbacks.onSaved;
 
@@ -376,7 +381,7 @@
 
     var backBtn = el("button", {
       class: "btn btn--ghost",
-      html: "← Volver",
+      text: "← Volver",
       onClick: function () {
         confirm({
           title: "¿Salir del editor?",
@@ -387,7 +392,7 @@
       }
     });
 
-    var saveBtn = el("button", { class: "btn btn--success", html: "💾 Guardar", onClick: save });
+    var saveBtn = el("button", { class: "btn btn--success", text: "Guardar", onClick: save });
 
     var bar = el("div", { class: "editor__bar" }, [
       el("div", { class: "container editor__bar-inner" }, [
@@ -407,7 +412,11 @@
           maxlength: 100,
           value: state.quiz.title,
           placeholder: "Ej. Repaso de historia — Tema 3",
-          oninput: function (e) { state.quiz.title = e.target.value; }
+          oninput: function (e) {
+            state.quiz.title = e.target.value;
+            var mono = document.getElementById("cover-mono");
+            if (mono) mono.textContent = window.UI.monogram(state.quiz.title);
+          }
         })
       ]),
       el("div", { class: "field" }, [
@@ -426,12 +435,12 @@
       el("h3", { text: "Preguntas" }),
       el("div", { id: "questions-list" }),
       el("div", { class: "add-q" }, [
-        el("button", { class: "btn", html: "➕ Añadir pregunta", onClick: addQuestion })
+        el("button", { class: "btn", text: "Añadir pregunta", onClick: addQuestion })
       ])
     ]);
 
     var footer = el("div", { class: "container", style: "margin-top:1.6rem; display:flex; justify-content:flex-end; gap:0.6rem;" }, [
-      el("button", { class: "btn btn--success btn--lg", html: "💾 Guardar cuestionario", onClick: save })
+      el("button", { class: "btn btn--success btn--lg", text: "Guardar cuestionario", onClick: save })
     ]);
 
     var view = el("div", { class: "editor" }, [

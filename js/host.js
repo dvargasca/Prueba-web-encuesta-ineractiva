@@ -5,7 +5,6 @@
   "use strict";
 
   var el = window.UI.el;
-  var SHAPES = window.UI.SHAPES;
   var toast = window.UI.toast;
   var Live = window.Live;
 
@@ -84,13 +83,13 @@
     var startBtn = el("button", {
       class: "btn btn--success btn--lg",
       id: "start-btn",
-      html: "▶ Empezar",
+      text: "Empezar",
       onClick: function () { S.socket.emit("host:start"); }
     });
     if (S.players.length === 0) startBtn.disabled = true;
 
     var view = el("div", { class: "game" }, [
-      topBar(el("span", { class: "pill", html: "👥 <strong id='pcount'>" + S.players.length + "</strong> jugadores" })),
+      topBar(el("span", { class: "pill", html: "<strong id='pcount'>" + S.players.length + "</strong> jugadores" })),
       el("div", { class: "lobby" }, [
         el("div", { class: "lobby__join" }, [
           el("div", { class: "lobby__step" }, [
@@ -120,7 +119,7 @@
   function renderPlayersInto(wrap) {
     wrap.innerHTML = "";
     if (!S.players.length) {
-      wrap.appendChild(el("div", { class: "lobby__empty", text: "Los apodos aparecerán aquí cuando se unan 👇" }));
+      wrap.appendChild(el("div", { class: "lobby__empty", text: "Los apodos aparecerán aquí cuando se unan." }));
       return;
     }
     S.players.forEach(function (p) {
@@ -128,7 +127,7 @@
       wrap.appendChild(el("div", {
         class: "player-chip" + (disconnected ? " disconnected" : ""),
         title: disconnected ? "Se ha desconectado (puede volver)" : null,
-        text: (disconnected ? "🔌 " : "") + p.name
+        text: p.name
       }));
     });
   }
@@ -171,7 +170,7 @@
     var grid = el("div", { class: "answers-play answers-play--display" + (tf ? " answers-play--tf" : ""), id: "answers-grid" });
     data.answers.forEach(function (a, i) {
       grid.appendChild(el("button", { class: "answer-btn " + window.UI.answerColorClass(data, i), "data-color": tf ? null : i, "data-index": i, disabled: "disabled" }, [
-        el("span", { class: "shape", text: window.UI.answerShape(data, i) }),
+        el("span", { class: "shape" }),
         el("span", { class: "label", text: a.text }),
         el("span", { class: "mark" })
       ]));
@@ -183,7 +182,7 @@
         el("span", { class: "pill", html: "Pregunta <strong>" + (data.index + 1) + "</strong> / " + data.total }),
         el("span", { class: "spacer" }),
         el("span", { class: "pill", html: "PIN <strong>" + S.pin + "</strong>" }),
-        el("button", { class: "btn btn--light btn--sm", html: "⏭ Saltar", onClick: function () { S.socket.emit("host:skip"); } })
+        el("button", { class: "btn btn--light btn--sm", text: "Saltar", onClick: function () { S.socket.emit("host:skip"); } })
       ]),
       el("div", { class: "progress" }, [el("div", { class: "progress__bar", style: "width:" + (data.index / data.total * 100) + "%" })]),
       el("div", { class: "q-stage" }, stageChildren)
@@ -230,19 +229,19 @@
       var isCorrect = data.correctIndexes.indexOf(i) >= 0;
       var h = Math.round(data.distribution[i] / maxCount * 100);
       var barClass = "dist__bar" + (tf ? (i === 0 ? " dist__bar--true" : " dist__bar--false") : "");
-      var shapeClass = "dist__shape" + (tf ? (i === 0 ? " dist__shape--true" : " dist__shape--false") : "");
+      var sqClass = "dist__square" + (tf ? (i === 0 ? " dist__square--true" : " dist__square--false") : "");
       return el("div", { class: "dist__col" + (isCorrect ? " is-correct" : "") }, [
         el("div", { class: "dist__count", text: data.distribution[i] }),
         el("div", { class: barClass, "data-color": tf ? null : i, style: "height:" + Math.max(6, h) + "%" }),
-        el("div", { class: shapeClass, "data-color": tf ? null : i }, [
-          el("span", { text: window.UI.answerShape(q, i) }),
-          isCorrect ? el("span", { class: "dist__check", text: " ✓" }) : null
+        el("div", { class: "dist__key" }, [
+          el("span", { class: sqClass, "data-color": tf ? null : i }),
+          isCorrect ? el("span", { class: "dist__check", text: "✓" }) : null
         ])
       ]);
     }));
 
     var lb = el("div", { class: "leaderboard" }, [
-      el("h3", { text: "🏆 Clasificación" }),
+      el("h3", { text: "Clasificación" }),
       el("div", { class: "leaderboard__list" }, (data.leaderboard || []).map(function (row) {
         return el("div", { class: "lb-row" }, [
           el("span", { class: "lb-rank", text: row.rank }),
@@ -254,7 +253,7 @@
 
     var nextBtn = el("button", {
       class: "btn btn--light btn--lg",
-      html: data.isLast ? "🏁 Ver podio" : "Siguiente →",
+      text: data.isLast ? "Ver podio" : "Siguiente →",
       onClick: function () { S.socket.emit("host:next"); }
     });
 
@@ -278,11 +277,10 @@
   /* ---------- Podio final ---------- */
   function renderEnded(data) {
     var podium = data.podium || [];
-    var medals = ["🥇", "🥈", "🥉"];
 
     var top = el("div", { class: "podium" }, podium.slice(0, 3).map(function (row, i) {
       return el("div", { class: "podium__place podium__place--" + (i + 1) }, [
-        el("div", { class: "podium__medal", text: medals[i] || "" }),
+        el("div", { class: "podium__rank podium__rank--" + (i + 1), text: i + 1 }),
         el("div", { class: "podium__name", text: row.name }),
         el("div", { class: "podium__score", text: row.score + " pts" }),
         el("div", { class: "podium__bar" })
@@ -303,12 +301,11 @@
     var view = el("div", { class: "game" }, [
       el("div", { class: "results" }, [
         el("div", { class: "results__card", style: "max-width:640px;" }, [
-          el("div", { class: "results__emoji", text: "🎉" }),
           el("h2", { text: "¡Fin del juego!", style: "margin:0.2rem 0 1rem;" }),
           podium.length ? top : el("p", { text: "No hubo jugadores." }),
           restList,
           el("div", { class: "results__actions", style: "margin-top:1.5rem;" }, [
-            el("button", { class: "btn btn--success btn--lg", html: "🏠 Volver al inicio", onClick: exit })
+            el("button", { class: "btn btn--success btn--lg", text: "Volver al inicio", onClick: exit })
           ])
         ])
       ])
@@ -323,7 +320,7 @@
     S.root.appendChild(el("div", { class: "game" }, [
       el("div", { class: "game-start" }, [
         el("div", { class: "game-start__card" }, [
-          el("div", { class: "game-start__emoji", text: "📡" }),
+          el("div", { class: "status-badge" }),
           el("h2", { text: "Creando la partida…" }),
           el("p", { text: "Conectando con el servidor." })
         ])

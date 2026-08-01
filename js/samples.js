@@ -4,7 +4,8 @@
 (function (window) {
   "use strict";
 
-  var COVERS = ["🎯", "🧠", "📚", "🔬", "🌍", "🎨", "🎵", "⚽", "🧪", "🚀", "💡", "🏛️"];
+  // Número de colores de acento disponibles para la portada (ver CSS/UI).
+  var ACCENTS = 6;
 
   /** Crea una respuesta en blanco. */
   function blankAnswer(text, correct) {
@@ -43,7 +44,7 @@
       id: "",
       title: "",
       description: "",
-      cover: COVERS[Math.floor(Math.random() * COVERS.length)],
+      cover: Math.floor(Math.random() * ACCENTS),
       createdAt: 0,
       updatedAt: 0,
       questions: [blankQuestion()]
@@ -56,7 +57,7 @@
       id: "",
       title: "Cultura general para clase",
       description: "Un ejemplo listo para jugar. Edítalo o crea el tuyo desde cero.",
-      cover: "🧠",
+      cover: 2,
       createdAt: 0,
       updatedAt: 0,
       questions: [
@@ -129,7 +130,7 @@
   }
 
   window.QuizSamples = {
-    COVERS: COVERS,
+    ACCENTS: ACCENTS,
     blankAnswer: blankAnswer,
     blankQuestion: blankQuestion,
     tfQuestion: tfQuestion,

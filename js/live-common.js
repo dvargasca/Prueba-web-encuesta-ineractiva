@@ -84,8 +84,8 @@
     input.addEventListener("keydown", function (e) { if (e.key === "Enter") submit(); });
 
     var actions = [
-      el("button", { class: "btn btn--lg", html: "Conectar 🚀", onClick: submit }),
-      el("button", { class: "btn btn--ghost btn--lg", html: "← Volver", onClick: function () { if (opts.onExit) opts.onExit(); } })
+      el("button", { class: "btn btn--lg", text: "Conectar", onClick: submit }),
+      el("button", { class: "btn btn--ghost btn--lg", text: "← Volver", onClick: function () { if (opts.onExit) opts.onExit(); } })
     ];
     if (isConfigured()) {
       actions.push(el("button", {
@@ -95,7 +95,7 @@
     }
 
     var card = el("div", { class: "game-start__card", style: "text-align:left; max-width:540px;" }, [
-      el("div", { class: "game-start__emoji", style: "text-align:center;", text: "🔌" }),
+      el("div", { class: "status-badge" }),
       el("h2", { style: "text-align:center; margin-bottom:0.3rem;", text: "Conecta con tu servidor de juego" }),
       el("p", { text: "El juego en vivo necesita un servidor Node (GitHub Pages no puede ejecutarlo). Si ya lo desplegaste en Railway o Render, pega aquí su dirección y quedará guardada:" }),
       input,

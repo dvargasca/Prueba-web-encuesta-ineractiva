@@ -13,8 +13,10 @@ const http = require("http");
 const crypto = require("crypto");
 const express = require("express");
 const { Server } = require("socket.io");
+const store = require("./store");
 
 const app = express();
+app.set("trust proxy", 1); // detrás de Railway/Render (para saber si la conexión es HTTPS)
 const server = http.createServer(app);
 
 // Orígenes permitidos para CORS. Por defecto "*" para que el frontend pueda estar
@@ -36,6 +38,121 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
+});
+
+/* =========================================================
+   Cuentas: inicio de sesión del profesor/a (una sola contraseña)
+   Los estudiantes NO inician sesión (solo usan el PIN). Los cuestionarios
+   se guardan en el servidor y solo se sirven/editan a quien haya iniciado
+   sesión, así los estudiantes no pueden verlos ni editarlos.
+   ========================================================= */
+const SESSION_COOKIE = "qa_session";
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 días
+
+// Contraseña por variable de entorno (recomendado en Railway/Render). Si no,
+// se configura la primera vez desde la propia app y se guarda (hasheada).
+const ENV_PASSWORD = process.env.TEACHER_PASSWORD || "";
+
+function hashPassword(pw) {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(String(pw), salt, 64).toString("hex");
+  return salt + ":" + hash;
+}
+function verifyPassword(pw, stored) {
+  if (!stored || String(stored).indexOf(":") < 0) return false;
+  const [salt, hash] = String(stored).split(":");
+  let test;
+  try { test = crypto.scryptSync(String(pw), salt, 64).toString("hex"); } catch (e) { return false; }
+  const a = Buffer.from(hash, "hex");
+  const b = Buffer.from(test, "hex");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+const ENV_PASSWORD_HASH = ENV_PASSWORD ? hashPassword(ENV_PASSWORD) : null;
+function effectivePasswordHash() { return ENV_PASSWORD ? ENV_PASSWORD_HASH : (store.getMeta("passwordHash") || null); }
+function needsSetup() { return !ENV_PASSWORD && !store.getMeta("passwordHash"); }
+
+function sessionSecret() { return process.env.SESSION_SECRET || store.getMeta("sessionSecret"); }
+function signValue(v) { return crypto.createHmac("sha256", sessionSecret()).update(v).digest("hex"); }
+function makeSession() { const p = String(Date.now()); return p + "." + signValue(p); }
+function validSession(cookie) {
+  if (!cookie) return false;
+  const i = cookie.lastIndexOf(".");
+  if (i < 0) return false;
+  const payload = cookie.slice(0, i);
+  const sig = cookie.slice(i + 1);
+  const expected = signValue(payload);
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return false;
+  const iat = Number(payload);
+  return !!iat && (Date.now() - iat) <= SESSION_MAX_AGE_MS;
+}
+function parseCookies(req) {
+  const out = {};
+  (req.headers.cookie || "").split(";").forEach((part) => {
+    const i = part.indexOf("=");
+    if (i > -1) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+  });
+  return out;
+}
+function isAuthed(req) { return validSession(parseCookies(req)[SESSION_COOKIE]); }
+function requireAuth(req, res, next) { if (isAuthed(req)) return next(); res.status(401).json({ error: "No autorizado." }); }
+function setSessionCookie(req, res) {
+  const secure = req.secure || req.headers["x-forwarded-proto"] === "https";
+  res.cookie(SESSION_COOKIE, makeSession(), { httpOnly: true, sameSite: "lax", secure, maxAge: SESSION_MAX_AGE_MS, path: "/" });
+}
+
+// El cuerpo JSON puede traer imágenes en data URLs, así que damos margen.
+app.use("/api", express.json({ limit: "12mb" }));
+// Nunca cachear la API: tras editar, una recarga debe ver los datos frescos.
+app.use("/api", (_req, res, next) => { res.set("Cache-Control", "no-store"); next(); });
+
+app.get("/api/auth/status", (req, res) => {
+  res.json({ authenticated: isAuthed(req), needsSetup: needsSetup() });
+});
+
+app.post("/api/auth/login", (req, res) => {
+  const pw = req.body && req.body.password;
+  if (!pw) return res.status(400).json({ error: "Escribe la contraseña." });
+  const hash = effectivePasswordHash();
+  if (!hash) return res.status(409).json({ error: "Aún no hay contraseña configurada.", needsSetup: true });
+  if (!verifyPassword(pw, hash)) return res.status(401).json({ error: "Contraseña incorrecta." });
+  setSessionCookie(req, res);
+  res.json({ ok: true });
+});
+
+app.post("/api/auth/setup", (req, res) => {
+  if (!needsSetup()) return res.status(409).json({ error: "La contraseña ya está configurada." });
+  const pw = String((req.body && req.body.password) || "");
+  if (pw.length < 4) return res.status(400).json({ error: "La contraseña debe tener al menos 4 caracteres." });
+  store.setMeta("passwordHash", hashPassword(pw));
+  setSessionCookie(req, res);
+  res.json({ ok: true });
+});
+
+app.post("/api/auth/logout", (req, res) => {
+  res.clearCookie(SESSION_COOKIE, { path: "/" });
+  res.json({ ok: true });
+});
+
+/* ---------- Cuestionarios (protegidos: solo el profe) ---------- */
+app.get("/api/quizzes", requireAuth, (_req, res) => {
+  res.json({ quizzes: store.allQuizzes() });
+});
+
+app.put("/api/quizzes/:id", requireAuth, (req, res) => {
+  const quiz = req.body && req.body.quiz ? req.body.quiz : req.body;
+  if (!quiz || typeof quiz.title !== "string" || !Array.isArray(quiz.questions)) {
+    return res.status(400).json({ error: "Cuestionario no válido." });
+  }
+  quiz.id = req.params.id; // el id de la URL manda
+  res.json({ quiz: store.upsertQuiz(quiz) });
+});
+
+app.delete("/api/quizzes/:id", requireAuth, (req, res) => {
+  store.removeQuiz(req.params.id);
+  res.json({ ok: true });
 });
 
 // Sirve el frontend estático (index.html, css/, js/).
@@ -489,7 +606,15 @@ io.on("connection", (socket) => {
    ========================================================= */
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log("QuizAula (modo en vivo) escuchando en http://localhost:" + PORT);
+  console.log("QuizAula escuchando en http://localhost:" + PORT);
+  console.log("Datos guardados en: " + store.DATA_FILE);
+  if (ENV_PASSWORD) {
+    console.log("Acceso de profesor/a: contraseña fijada por la variable TEACHER_PASSWORD.");
+  } else if (needsSetup()) {
+    console.log("Acceso de profesor/a: SIN configurar. Abre la app, entra como profesor/a y crea tu contraseña cuanto antes.");
+  } else {
+    console.log("Acceso de profesor/a: contraseña configurada desde la app.");
+  }
 });
 
 // Exporta para pruebas.

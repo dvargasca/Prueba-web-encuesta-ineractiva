@@ -1,11 +1,11 @@
 {
   "name": "quizaula",
   "version": "1.0.0",
-  "description": "Cuestionarios interactivos tipo Kahoot con modo en vivo multijugador (los estudiantes se unen con un PIN desde el móvil).",
+  "description": "Cuestionarios interactivos con modo en vivo multijugador (los estudiantes se unen con un PIN desde el móvil).",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/live.test.js && node test/reconnect.test.js"
+    "test": "node test/live.test.js && node test/reconnect.test.js && node test/auth.test.js"
   },
   "engines": {
     "node": ">=18"

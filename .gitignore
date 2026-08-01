@@ -1,6 +1,9 @@
 # Dependencias
 node_modules/
 
+# Datos del servidor (cuestionarios y configuración de acceso)
+data/
+
 # Archivos del sistema
 .DS_Store
 Thumbs.db
