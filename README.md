@@ -14,6 +14,9 @@ El editor y la biblioteca funcionan sin servidor; el **modo en vivo** necesita e
 - **Crear cuestionarios** con preguntas de **opción múltiple** (2 a 4 respuestas) o **verdadero/falso** (con estilo propio ✓/✗), **imagen opcional**, y **tiempo** y **puntos** por pregunta.
 - **Modo en vivo estilo Kahoot:** PIN de acceso, sala de espera con los apodos, botones de colores con las formas icónicas (▲ ◆ ● ■), temporizador sincronizado, **puntuación por velocidad y acierto**, **bonus por racha** (aciertos encadenados), gráfico de respuestas, **clasificación** entre preguntas y **podio final**.
 - **Reconexión automática:** si a un estudiante se le cae el internet o **recarga la página**, vuelve a su sitio **sin perder la puntuación**.
+- **Vista separada para estudiantes:** al abrir la dirección del juego, tus estudiantes
+  **solo ven la pantalla para poner el PIN y jugar** — no tu biblioteca de cuestionarios ni
+  el editor. Tú entras a tu biblioteca desde **«¿Eres el profesor/a?»** (o `#profesor`).
 - **Los estudiantes solo necesitan el navegador del móvil.** Sin apps, sin cuentas.
 - **Atajos de teclado** (teclas `1`–`4`) en el modo solo.
 - **Biblioteca** de cuestionarios guardada en tu navegador (`localStorage`) con **importar / exportar** en JSON.
@@ -141,6 +144,26 @@ Luego añade el certificado con [Certbot](https://certbot.eff.org/) (`certbot --
 5. En cada pregunta, los móviles muestran los **botones de colores**; el marcador y la
    **clasificación** aparecen en tu pantalla. Pulsa **Siguiente** para avanzar.
 6. Al final se muestra el **podio**. 🏆
+
+## 👀 Qué ve cada quién (estudiante vs. profesor/a)
+
+La app tiene **dos vistas** para que tus estudiantes nunca vean ni editen tus cuestionarios:
+
+- **Vista de estudiante (por defecto):** es lo que aparece al abrir la dirección del juego.
+  Solo tiene el campo para **escribir el PIN** y unirse. Sin biblioteca, sin editor, sin botones
+  de crear/editar/eliminar. Es la pantalla que usan tus estudiantes desde el móvil.
+- **Vista de profesor/a (`#profesor`):** tu biblioteca completa (crear, editar, importar/exportar,
+  jugar en vivo o en solo). Entras pulsando **«¿Eres el profesor/a? Entra aquí»** en la pantalla
+  de estudiante, o abriendo la dirección con `#profesor` al final
+  (p. ej. `https://tu-app.up.railway.app/#profesor`).
+
+**Tu navegador recuerda que eres el profesor/a**, así que la próxima vez entras directo a tu
+biblioteca. El móvil de cada estudiante nunca guarda ese rol, por lo que siempre verá la pantalla
+del PIN. Si usas un ordenador **compartido** y quieres dejarlo como el de un estudiante, pulsa
+**«👋 Salir»** (arriba a la derecha): vuelve a la vista de estudiante y olvida el rol en ese equipo.
+
+> 🔒 Además, tus cuestionarios se guardan **solo en tu navegador** (`localStorage`): aunque un
+> estudiante escriba `#profesor` en su móvil, vería una biblioteca vacía, nunca los tuyos.
 
 ## 🗂️ Estructura del proyecto
 

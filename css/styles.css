@@ -155,6 +155,13 @@ button { font-family: inherit; }
 }
 .topbar__spacer { flex: 1; }
 .topbar__actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+/* Botón "Salir" de la vista de profe: discreto sobre la barra morada. */
+.topbar__exit {
+  --btn-bg: rgba(255, 255, 255, 0.16);
+  --btn-fg: #fff;
+  box-shadow: none;
+}
+.topbar__exit:hover { --btn-bg: rgba(255, 255, 255, 0.28); }
 
 /* =========================================================
    VISTA: INICIO / BIBLIOTECA
@@ -525,6 +532,23 @@ button { font-family: inherit; }
   letter-spacing: 0.14em; color: var(--ink); font-family: inherit;
 }
 .joinbar__pin:focus { outline: 3px solid var(--purple-300); }
+
+/* Vista del estudiante (pantalla de acceso con PIN) */
+.student__brand {
+  display: flex; align-items: center; gap: 0.6rem;
+  color: #fff; font-weight: 800; font-size: 1.7rem; letter-spacing: -0.02em;
+}
+.student__form { text-align: center; }
+.student__pin {
+  text-align: center; font-size: 1.8rem; font-weight: 800;
+  letter-spacing: 0.28em; padding: 0.8rem 1rem;
+}
+.student__foot { margin: 0; }
+.student__teacher-link {
+  color: rgba(255, 255, 255, 0.85); font-weight: 600;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.student__teacher-link:hover { color: #fff; }
 
 /* Botones pequeños de las tarjetas: que no se estiren */
 .quiz-card__foot .btn--sm { flex: 0 0 auto; }

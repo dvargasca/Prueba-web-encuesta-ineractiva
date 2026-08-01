@@ -13,9 +13,47 @@
 
   var root = document.getElementById("app");
 
+  var ROLE_KEY = "quizaula_role";
+
+  /* ---------- Rol: profesor/a vs. estudiante ----------
+     La app es puramente de navegador: los cuestionarios viven en el
+     localStorage de CADA navegador. Para que los estudiantes solo vean la
+     pantalla de "entrar con PIN" (y no la biblioteca del profesor), separamos
+     dos vistas:
+       · Estudiante → vista por defecto (la que abre la dirección del juego).
+       · Profesor/a → #profesor. El navegador del profe recuerda su rol para
+         entrar directo a su biblioteca; el móvil del estudiante nunca lo tiene. */
+  function getRole() { try { return localStorage.getItem(ROLE_KEY) || ""; } catch (e) { return ""; } }
+  function setRole(r) { try { r ? localStorage.setItem(ROLE_KEY, r) : localStorage.removeItem(ROLE_KEY); } catch (e) {} }
+
+  /** Cambia el # de la URL sin recargar ni ensuciar el historial. */
+  function setHash(hash) {
+    try {
+      var url = hash ? ("#" + hash) : (window.location.pathname + window.location.search);
+      if (window.history && window.history.replaceState) window.history.replaceState(null, "", url);
+      else window.location.hash = hash || "";
+    } catch (e) {}
+  }
+
+  /** Siembra el cuestionario de ejemplo la primera vez (solo en la vista del profe). */
+  function seedSampleOnce() {
+    try {
+      if (Storage.isEmpty() && !localStorage.getItem("quizaula_seeded")) {
+        Storage.save(Samples.sampleQuiz());
+        localStorage.setItem("quizaula_seeded", "1");
+      }
+    } catch (e) {}
+  }
+
   /* ---------- Navegación ---------- */
 
   function goHome() { window.scrollTo(0, 0); renderHome(); }
+
+  /** Vista del estudiante: solo entrar con PIN y jugar. */
+  function goStudent() { setHash("jugar"); window.scrollTo(0, 0); renderStudent(); }
+
+  /** Vista del profesor/a: biblioteca completa (queda recordada en este navegador). */
+  function goTeacher() { setRole("teacher"); setHash("profesor"); window.scrollTo(0, 0); renderHome(); }
 
   function goEditor(quiz) {
     window.scrollTo(0, 0);
@@ -35,9 +73,9 @@
     window.QuizHost.render(root, quiz, { onExit: goHome });
   }
 
-  function goJoin(pin) {
+  function goJoin(pin, onExit) {
     window.scrollTo(0, 0);
-    window.QuizPlayer.render(root, { pin: pin, onExit: goHome });
+    window.QuizPlayer.render(root, { pin: pin, onExit: onExit || goStudent });
   }
 
   function goServerConfig() {
@@ -174,9 +212,61 @@
     return el("div", { class: "quiz-card" }, [cover, body, foot]);
   }
 
-  /* ---------- Vista de inicio ---------- */
+  /* ---------- Vista del ESTUDIANTE (solo entrar con PIN) ---------- */
+
+  function renderStudent() {
+    var pinInput = el("input", {
+      class: "input student__pin", type: "tel", inputmode: "numeric", maxlength: 8,
+      placeholder: "PIN del juego", "aria-label": "PIN del juego"
+    });
+
+    function submit(e) {
+      if (e) e.preventDefault();
+      var pin = (pinInput.value || "").trim();
+      if (!/^\d{4,8}$/.test(pin)) { toast("Escribe el PIN que ves en la pantalla.", "error"); pinInput.focus(); return; }
+      goJoin(pin, goStudent);
+    }
+
+    var form = el("form", { class: "student__form", onSubmit: submit }, [
+      pinInput,
+      el("button", { class: "btn btn--lg btn--block", type: "submit", style: "margin-top:1rem;", html: "Entrar 🚀" })
+    ]);
+
+    var card = el("div", { class: "game-start__card" }, [
+      el("div", { class: "game-start__emoji", text: "🎮" }),
+      el("h2", { text: "Unirse al juego" }),
+      el("p", { text: "Escribe el PIN que aparece en la pantalla de tu profesor/a para entrar." }),
+      form
+    ]);
+
+    var teacherLink = el("p", { class: "student__foot" }, [
+      el("a", {
+        href: "#profesor", class: "student__teacher-link",
+        text: "¿Eres el profesor/a? Entra aquí →",
+        onClick: function (e) { e.preventDefault(); goTeacher(); }
+      })
+    ]);
+
+    var view = el("div", { class: "game" }, [
+      el("div", { class: "game-start" }, [
+        el("div", { class: "student__brand" }, [
+          el("span", { class: "brand__logo", text: "🎯" }),
+          el("span", { text: "QuizAula" })
+        ]),
+        card,
+        teacherLink
+      ])
+    ]);
+
+    root.innerHTML = "";
+    root.appendChild(view);
+    setTimeout(function () { pinInput.focus(); }, 60);
+  }
+
+  /* ---------- Vista de inicio (PROFESOR/A) ---------- */
 
   function renderHome() {
+    seedSampleOnce();
     var quizzes = Storage.getAll();
 
     // Input oculto para importar
@@ -195,6 +285,8 @@
         ]),
         el("span", { class: "topbar__spacer" }),
         el("div", { class: "topbar__actions" }, [
+          el("button", { class: "btn btn--sm topbar__exit", title: "Salir de la vista de profesor/a (volver a la de estudiante)", onClick: function () { setRole(""); goStudent(); } },
+            [el("span", { text: "👋 " }), el("span", { class: "txt", text: "Salir" })]),
           el("button", { class: "btn btn--light btn--sm", onClick: function () { importInput.click(); } },
             [el("span", { text: "⬆ " }), el("span", { class: "txt", text: "Importar" })]),
           el("button", { class: "btn btn--sm", onClick: function () { goEditor(null); } },
@@ -213,7 +305,7 @@
       if (e) e.preventDefault();
       var pin = (joinPin.value || "").trim();
       if (!/^\d{4,8}$/.test(pin)) { toast("Escribe el PIN que ves en la pantalla.", "error"); joinPin.focus(); return; }
-      goJoin(pin);
+      goJoin(pin, goHome);
     }
     var joinBar = el("form", { class: "joinbar", onSubmit: submitJoin }, [
       el("span", { class: "joinbar__label", text: "¿Eres estudiante?" }),
@@ -285,18 +377,23 @@
     try { return !!sessionStorage.getItem("quizaula_live_session"); } catch (e) { return false; }
   }
 
+  /** Decide qué vista mostrar según el # de la URL y el rol recordado. */
+  function route() {
+    var hash = (window.location.hash || "").replace(/^#/, "").toLowerCase();
+    if (hash === "profesor" || hash === "profe" || hash === "teacher") { goTeacher(); return; }
+    if (hash === "jugar" || hash === "estudiante" || hash === "student") { renderStudent(); return; }
+    // Sin # explícito: solo el navegador del profe (recordado) ve la biblioteca.
+    if (getRole() === "teacher") { renderHome(); return; }
+    renderStudent();
+  }
+
   function boot() {
-    // Sembrar el ejemplo la primera vez
-    if (Storage.isEmpty() && !localStorage.getItem("quizaula_seeded")) {
-      Storage.save(Samples.sampleQuiz());
-      localStorage.setItem("quizaula_seeded", "1");
-    }
     // Si el estudiante recargó a mitad de partida, retomamos su sesión en vivo.
     if (window.Live && window.Live.isLiveAvailable() && hasLiveSession()) {
       goJoin();
       return;
     }
-    renderHome();
+    route();
   }
 
   if (document.readyState === "loading") {
@@ -305,6 +402,9 @@
     boot();
   }
 
+  // Cambiar el # a mano en la barra de direcciones también cambia de vista.
+  window.addEventListener("hashchange", route);
+
   // Exponer utilidades por si se quieren usar desde la consola
-  window.QuizApp = { goHome: goHome, goEditor: goEditor, goPlay: goPlay, goHostLive: goHostLive, goJoin: goJoin };
+  window.QuizApp = { goHome: goHome, goEditor: goEditor, goPlay: goPlay, goHostLive: goHostLive, goJoin: goJoin, goStudent: goStudent, goTeacher: goTeacher };
 })(window, document);
