@@ -13,18 +13,15 @@
 
   var root = document.getElementById("app");
 
-  var ROLE_KEY = "quizaula_role";
+  var Auth = window.QuizAuth;
+  var authState = { authenticated: false, needsSetup: false };
 
-  /* ---------- Rol: profesor/a vs. estudiante ----------
-     La app es puramente de navegador: los cuestionarios viven en el
-     localStorage de CADA navegador. Para que los estudiantes solo vean la
-     pantalla de "entrar con PIN" (y no la biblioteca del profesor), separamos
-     dos vistas:
+  /* ---------- Acceso: profesor/a vs. estudiante ----------
+     Los cuestionarios viven en el SERVIDOR y solo se sirven/editan a quien
+     haya iniciado sesión (una sola contraseña de profesor/a). Los estudiantes
+     no inician sesión: solo ven la pantalla del PIN y juegan.
        · Estudiante → vista por defecto (la que abre la dirección del juego).
-       · Profesor/a → #profesor. El navegador del profe recuerda su rol para
-         entrar directo a su biblioteca; el móvil del estudiante nunca lo tiene. */
-  function getRole() { try { return localStorage.getItem(ROLE_KEY) || ""; } catch (e) { return ""; } }
-  function setRole(r) { try { r ? localStorage.setItem(ROLE_KEY, r) : localStorage.removeItem(ROLE_KEY); } catch (e) {} }
+       · Profesor/a → #profesor: pide la contraseña y muestra la biblioteca. */
 
   /** Cambia el # de la URL sin recargar ni ensuciar el historial. */
   function setHash(hash) {
@@ -35,16 +32,6 @@
     } catch (e) {}
   }
 
-  /** Siembra el cuestionario de ejemplo la primera vez (solo en la vista del profe). */
-  function seedSampleOnce() {
-    try {
-      if (Storage.isEmpty() && !localStorage.getItem("quizaula_seeded")) {
-        Storage.save(Samples.sampleQuiz());
-        localStorage.setItem("quizaula_seeded", "1");
-      }
-    } catch (e) {}
-  }
-
   /* ---------- Navegación ---------- */
 
   function goHome() { window.scrollTo(0, 0); renderHome(); }
@@ -52,12 +39,14 @@
   /** Vista del estudiante: solo entrar con PIN y jugar. */
   function goStudent() { setHash("jugar"); window.scrollTo(0, 0); renderStudent(); }
 
-  /** Vista del profesor/a: biblioteca completa (queda recordada en este navegador). */
-  function goTeacher() { setRole("teacher"); setHash("profesor"); window.scrollTo(0, 0); renderHome(); }
+  /** Zona del profesor/a: inicio de sesión y, si ya entró, su biblioteca. */
+  function goTeacher() { setHash("profesor"); window.scrollTo(0, 0); showTeacherArea(); }
 
   function goEditor(quiz) {
     window.scrollTo(0, 0);
-    window.QuizEditor.render(root, quiz || Samples.blankQuiz(), {
+    // Trabajamos sobre una copia para no tocar la biblioteca hasta guardar.
+    var draft = quiz ? JSON.parse(JSON.stringify(quiz)) : Samples.blankQuiz();
+    window.QuizEditor.render(root, draft, {
       onExit: goHome,
       onSaved: function () { goHome(); }
     });
@@ -84,6 +73,102 @@
       onConnect: function () { toast("Servidor guardado.", "success"); goHome(); },
       onExit: goHome
     });
+  }
+
+  /* ---------- Zona del profesor/a (con inicio de sesión) ---------- */
+
+  /** Muestra la biblioteca si hay sesión; si no, la pantalla de acceso. */
+  function showTeacherArea() {
+    if (!authState.authenticated) { renderTeacherLogin(); return; }
+    root.innerHTML = "";
+    root.appendChild(el("div", { class: "loading", text: "Cargando tus cuestionarios…" }));
+    Storage.hydrate()
+      .then(function () { renderHome(); })
+      .catch(function (err) {
+        authState.authenticated = false;
+        if (!(err && err.code === 401)) toast("No se pudo conectar con el servidor.", "error");
+        renderTeacherLogin();
+      });
+  }
+
+  function logoutTeacher() {
+    Auth.logout().then(function () {
+      authState.authenticated = false;
+      Storage.reset();
+      goStudent();
+    });
+  }
+
+  /** Pantalla de acceso: iniciar sesión o crear la contraseña la primera vez. */
+  function renderTeacherLogin() {
+    var setup = !!authState.needsSetup;
+
+    var pwInput = el("input", {
+      class: "input", type: "password", autocomplete: setup ? "new-password" : "current-password",
+      placeholder: setup ? "Crea una contraseña" : "Contraseña de profesor/a",
+      style: "text-align:center; font-size:1.15rem;"
+    });
+    var pw2Input = setup ? el("input", {
+      class: "input", type: "password", autocomplete: "new-password",
+      placeholder: "Repite la contraseña", style: "text-align:center; font-size:1.15rem; margin-top:0.6rem;"
+    }) : null;
+    var errorBox = el("p", { style: "color:var(--danger); font-weight:600; min-height:1.2em; margin:0.4rem 0 0; text-align:center;" });
+
+    function submit(e) {
+      if (e) e.preventDefault();
+      var pw = pwInput.value || "";
+      if (setup) {
+        if (pw.length < 4) { errorBox.textContent = "La contraseña debe tener al menos 4 caracteres."; pwInput.focus(); return; }
+        if (pw !== (pw2Input.value || "")) { errorBox.textContent = "Las contraseñas no coinciden."; pw2Input.focus(); return; }
+        Auth.setup(pw).then(function (r) {
+          if (r.ok) { authState.authenticated = true; authState.needsSetup = false; toast("Contraseña creada.", "success"); goTeacher(); }
+          else { errorBox.textContent = (r.data && r.data.error) || "No se pudo crear la contraseña."; }
+        });
+      } else {
+        if (!pw) { errorBox.textContent = "Escribe la contraseña."; pwInput.focus(); return; }
+        Auth.login(pw).then(function (r) {
+          if (r.ok) { authState.authenticated = true; goTeacher(); }
+          else if (r.data && r.data.needsSetup) { authState.needsSetup = true; renderTeacherLogin(); }
+          else { errorBox.textContent = (r.data && r.data.error) || "No se pudo iniciar sesión."; pwInput.select(); }
+        });
+      }
+    }
+
+    var fields = [pwInput];
+    if (pw2Input) fields.push(pw2Input);
+    fields.push(el("button", { class: "btn btn--lg btn--block", type: "submit", style: "margin-top:1rem;", html: setup ? "Crear y entrar 🚀" : "Entrar 🚀" }));
+    fields.push(errorBox);
+
+    var card = el("div", { class: "game-start__card" }, [
+      el("div", { class: "game-start__emoji", text: setup ? "🔐" : "🧑‍🏫" }),
+      el("h2", { text: setup ? "Configura tu contraseña" : "Acceso de profesor/a" }),
+      el("p", { text: setup
+        ? "Es la primera vez. Crea una contraseña para proteger tus cuestionarios; solo tú la tendrás."
+        : "Escribe tu contraseña para ver y editar tus cuestionarios. Los estudiantes no la necesitan." }),
+      el("form", { class: "student__form", onSubmit: submit }, fields)
+    ]);
+
+    var studentLink = el("p", { class: "student__foot" }, [
+      el("a", {
+        href: "#jugar", class: "student__teacher-link", text: "← Soy estudiante, quiero entrar con un PIN",
+        onClick: function (e) { e.preventDefault(); goStudent(); }
+      })
+    ]);
+
+    var view = el("div", { class: "game" }, [
+      el("div", { class: "game-start" }, [
+        el("div", { class: "student__brand" }, [
+          el("span", { class: "brand__logo", text: "🎯" }),
+          el("span", { text: "QuizAula" })
+        ]),
+        card,
+        studentLink
+      ])
+    ]);
+
+    root.innerHTML = "";
+    root.appendChild(view);
+    setTimeout(function () { pwInput.focus(); }, 60);
   }
 
   /** Línea informativa del servidor del modo en vivo (en el pie del inicio). */
@@ -266,7 +351,6 @@
   /* ---------- Vista de inicio (PROFESOR/A) ---------- */
 
   function renderHome() {
-    seedSampleOnce();
     var quizzes = Storage.getAll();
 
     // Input oculto para importar
@@ -285,7 +369,7 @@
         ]),
         el("span", { class: "topbar__spacer" }),
         el("div", { class: "topbar__actions" }, [
-          el("button", { class: "btn btn--sm topbar__exit", title: "Salir de la vista de profesor/a (volver a la de estudiante)", onClick: function () { setRole(""); goStudent(); } },
+          el("button", { class: "btn btn--sm topbar__exit", title: "Cerrar sesión de profesor/a", onClick: logoutTeacher },
             [el("span", { text: "👋 " }), el("span", { class: "txt", text: "Salir" })]),
           el("button", { class: "btn btn--light btn--sm", onClick: function () { importInput.click(); } },
             [el("span", { text: "⬆ " }), el("span", { class: "txt", text: "Importar" })]),
@@ -377,13 +461,13 @@
     try { return !!sessionStorage.getItem("quizaula_live_session"); } catch (e) { return false; }
   }
 
-  /** Decide qué vista mostrar según el # de la URL y el rol recordado. */
+  /** Decide qué vista mostrar según el # de la URL y la sesión iniciada. */
   function route() {
     var hash = (window.location.hash || "").replace(/^#/, "").toLowerCase();
-    if (hash === "profesor" || hash === "profe" || hash === "teacher") { goTeacher(); return; }
+    if (hash === "profesor" || hash === "profe" || hash === "teacher") { showTeacherArea(); return; }
     if (hash === "jugar" || hash === "estudiante" || hash === "student") { renderStudent(); return; }
-    // Sin # explícito: solo el navegador del profe (recordado) ve la biblioteca.
-    if (getRole() === "teacher") { renderHome(); return; }
+    // Sin # explícito: si ya hay sesión de profe, a su biblioteca; si no, al PIN.
+    if (authState.authenticated) { showTeacherArea(); return; }
     renderStudent();
   }
 
@@ -393,7 +477,15 @@
       goJoin();
       return;
     }
-    route();
+    // Si la sesión del profe caduca durante una escritura, volvemos al acceso.
+    Storage.setOnError(function (err) {
+      if (err && err.code === 401) { authState.authenticated = false; setHash("profesor"); renderTeacherLogin(); }
+    });
+    // Preguntamos al servidor si hay sesión iniciada y decidimos qué mostrar.
+    Auth.status().then(function (st) {
+      authState = { authenticated: !!st.authenticated, needsSetup: !!st.needsSetup };
+      route();
+    });
   }
 
   if (document.readyState === "loading") {
