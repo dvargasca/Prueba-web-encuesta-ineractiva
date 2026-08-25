@@ -277,6 +277,7 @@
   /* ---------- Podio final ---------- */
   function renderEnded(data) {
     var podium = data.podium || [];
+    S.reportId = data.reportId || null;
 
     var top = el("div", { class: "podium" }, podium.slice(0, 3).map(function (row, i) {
       return el("div", { class: "podium__place podium__place--" + (i + 1) }, [
@@ -304,7 +305,10 @@
           el("h2", { text: "¡Fin del juego!", style: "margin:0.2rem 0 1rem;" }),
           podium.length ? top : el("p", { text: "No hubo jugadores." }),
           restList,
-          el("div", { class: "results__actions", style: "margin-top:1.5rem;" }, [
+          el("div", { class: "results__actions", style: "margin-top:1.5rem; display:flex; gap:0.6rem; justify-content:center; flex-wrap:wrap;" }, [
+            (S.reportId && window.QuizReports)
+              ? el("button", { class: "btn btn--light btn--lg", text: "Descargar respuestas (CSV)", title: "Exporta lo que respondió cada estudiante", onClick: function () { window.QuizReports.downloadCsvById(S.reportId); } })
+              : null,
             el("button", { class: "btn btn--success btn--lg", text: "Volver al inicio", onClick: exit })
           ])
         ])

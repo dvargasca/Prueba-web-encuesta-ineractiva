@@ -17,6 +17,7 @@ computadora o publicarlo gratis en internet.
 - **Crear cuestionarios** con preguntas de **opción múltiple** (2 a 4 respuestas) o **verdadero/falso** (con estilo propio ✓/✗), **imagen opcional**, y **tiempo** y **puntos** por pregunta.
 - **Modo en vivo en tiempo real:** PIN de acceso, sala de espera con los apodos, opciones diferenciadas por **color** (cuadros de color, con identidad propia y sin figuras), temporizador sincronizado, **puntuación por velocidad y acierto**, **bonus por racha** (aciertos encadenados), gráfico de respuestas, **clasificación** entre preguntas y **podio final**.
 - **Reconexión automática:** si a un estudiante se le cae el internet o **recarga la página**, vuelve a su sitio **sin perder la puntuación**.
+- **Reportes de partidas:** al terminar cada juego en vivo se guarda un reporte con **lo que respondió cada estudiante en cada pregunta** (acierto/fallo, puntos y tiempo). Míralos en **Reportes** y **descárgalos en CSV** (se abre en Excel) para hacer seguimiento. Los reportes se **borran solos tras una semana** para no cargar el servidor.
 - **Acceso separado y protegido:** al abrir la dirección del juego, tus estudiantes **solo ven
   la pantalla para poner el PIN y jugar**. Tu biblioteca y el editor quedan detrás de una
   **contraseña de profesor/a** (aplicada en el servidor): los estudiantes **no pueden verlos ni
@@ -183,7 +184,7 @@ vez. En un ordenador **compartido**, pulsa **«👋 Salir»** (arriba a la derec
 .
 ├── index.html          # Aplicación (acceso, editor, biblioteca, modo solo y en vivo)
 ├── server.js           # Servidor: login del profe, API de cuestionarios y modo EN VIVO (Socket.IO)
-├── store.js            # Guardado de los cuestionarios y la config de acceso (JSON en disco)
+├── store.js            # Guardado de cuestionarios, config de acceso y reportes (JSON en disco)
 ├── package.json
 ├── railway.json        # Configuración de despliegue en Railway
 ├── render.yaml         # Configuración de despliegue en Render
@@ -203,11 +204,13 @@ vez. En un ordenador **compartido**, pulsa **«👋 Salir»** (arriba a la derec
 │   ├── game.js         # Motor del modo Solo (con bonus por racha)
 │   ├── host.js         # Vista del anfitrión (en vivo)
 │   ├── player.js       # Vista del jugador/móvil (en vivo + reconexión)
+│   ├── reports.js      # Reportes de partidas: lista, detalle y descarga en CSV
 │   └── app.js          # Inicio, acceso, orquestación y reanudación de sesión
 └── test/
     ├── live.test.js       # Partida completa (anfitrión + 2 jugadores)
     ├── reconnect.test.js  # Reconexión de un jugador a mitad de partida
-    └── auth.test.js       # Login y API: solo el profe puede ver/editar cuestionarios
+    ├── auth.test.js       # Login y API: solo el profe puede ver/editar cuestionarios
+    └── report.test.js     # Reporte de partida: respuestas por participante y expiración
 ```
 
 ## 🔒 Privacidad y datos
@@ -215,8 +218,10 @@ vez. En un ordenador **compartido**, pulsa **«👋 Salir»** (arriba a la derec
 - Tus **cuestionarios** se guardan **en el servidor** (en `DATA_DIR`), ligados a tu contraseña.
   Solo se sirven/editan a quien haya iniciado sesión. Usa **Exportar** para copias de seguridad.
 - La **contraseña** se guarda **hasheada** (scrypt), nunca en texto plano.
-- En el **modo en vivo**, la partida vive **en memoria** únicamente mientras se juega (apodos y
-  puntuaciones). Al terminar o cerrar, no queda nada almacenado.
+- En el **modo en vivo**, la partida vive **en memoria** mientras se juega (apodos y
+  puntuaciones). Al terminar, se guarda un **reporte** con las respuestas de cada apodo por
+  pregunta (en `DATA_DIR/reports`), que el profe puede consultar y descargar; se **elimina
+  automáticamente tras una semana**.
 - Los estudiantes **no crean cuentas** ni dan datos personales; solo eligen un apodo.
 
 ## 🧪 Pruebas

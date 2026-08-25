@@ -806,6 +806,54 @@ button { font-family: inherit; }
 .server-link { color: var(--brand-500); font-weight: 600; text-decoration: underline; cursor: pointer; }
 .server-link:hover { color: var(--brand-700); }
 
+/* =========================================================
+   REPORTES DE PARTIDAS (respuestas de los estudiantes)
+   ========================================================= */
+.report-page { padding: 1.5rem 0 3rem; }
+.report-page__head { display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.report-page__head h2 { color: var(--ink); margin: 0; font-size: 1.5rem; }
+.report-page .hint { color: var(--ink-soft); font-size: 0.85rem; }
+
+/* Lista de sesiones guardadas */
+.report-list { display: flex; flex-direction: column; gap: 0.7rem; }
+.report-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 0.9rem 1.1rem; flex-wrap: wrap; box-shadow: var(--shadow-sm);
+}
+.report-row__title { margin: 0; font-size: 1.1rem; color: var(--ink); }
+.report-row__sub { margin: 0.15rem 0 0; color: var(--ink-soft); font-size: 0.85rem; }
+.report-row__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+/* Detalle: cabecera + tabla participante × pregunta */
+.report-detail__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.report-detail__head h2 { color: var(--ink); }
+.report-detail h3 { color: var(--ink); }
+
+.report-table-wrap {
+  overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--paper); box-shadow: var(--shadow-sm); -webkit-overflow-scrolling: touch;
+}
+.report-table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+.report-table th, .report-table td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); text-align: center; white-space: nowrap; }
+.report-table thead th { position: sticky; top: 0; background: var(--brand-700); color: #fff; font-weight: 700; z-index: 1; }
+.report-th--name, .report-td--name { text-align: left; }
+.report-td--name { font-weight: 700; color: var(--ink); }
+.report-td--rank { color: var(--ink-soft); }
+.report-th--q { cursor: help; }
+
+/* Celdas de respuesta: pastel + letra negra (a juego con las respuestas) */
+.report-cell { text-align: left; }
+.report-cell--ok { background: var(--tf-true); color: var(--ink); }
+.report-cell--no { background: var(--tf-false); color: var(--ink); }
+.report-cell--none { color: var(--ink-soft); text-align: center; }
+.report-cell__txt { display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+
+/* Leyenda de preguntas */
+.report-legend { margin: 0.4rem 0 0; padding-left: 1.3rem; color: var(--ink); font-size: 0.9rem; line-height: 1.6; }
+.report-legend__q { font-weight: 700; }
+.report-legend__ok { color: var(--success); font-weight: 600; }
+
 /* Reduce animaciones si el usuario lo prefiere */
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }

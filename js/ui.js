@@ -121,9 +121,9 @@
     });
   }
 
-  /** Descarga un texto como archivo. */
-  function download(filename, text) {
-    var blob = new Blob([text], { type: "application/json" });
+  /** Descarga un texto como archivo. mime opcional (por defecto JSON). */
+  function download(filename, text, mime) {
+    var blob = new Blob([text], { type: mime || "application/json" });
     var url = URL.createObjectURL(blob);
     var a = el("a", { href: url, download: filename });
     document.body.appendChild(a);
