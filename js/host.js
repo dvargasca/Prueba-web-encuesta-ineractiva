@@ -229,12 +229,15 @@
       var isCorrect = data.correctIndexes.indexOf(i) >= 0;
       var h = Math.round(data.distribution[i] / maxCount * 100);
       var barClass = "dist__bar" + (tf ? (i === 0 ? " dist__bar--true" : " dist__bar--false") : "");
-      var sqClass = "dist__square" + (tf ? (i === 0 ? " dist__square--true" : " dist__square--false") : "");
+      var optClass = "dist__opt" + (tf ? (i === 0 ? " dist__opt--true" : " dist__opt--false") : "") + (isCorrect ? " dist__opt--correct" : "");
       return el("div", { class: "dist__col" + (isCorrect ? " is-correct" : "") }, [
         el("div", { class: "dist__count", text: data.distribution[i] }),
         el("div", { class: barClass, "data-color": tf ? null : i, style: "height:" + Math.max(6, h) + "%" }),
-        el("div", { class: "dist__key" }, [
-          el("span", { class: sqClass, "data-color": tf ? null : i }),
+        // Etiqueta con el TEXTO de la opción (mismo color que el botón de
+        // respuesta) y una marca ✓ en la correcta, para ver qué opción es
+        // cada barra y distinguir la correcta de las incorrectas.
+        el("div", { class: optClass, "data-color": tf ? null : i }, [
+          el("span", { class: "dist__opt-text", text: a.text }),
           isCorrect ? el("span", { class: "dist__check", text: "✓" }) : null
         ])
       ]);

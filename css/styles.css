@@ -686,7 +686,7 @@ button { font-family: inherit; }
 /* Gráfico de distribución de respuestas (revelado del anfitrión) */
 .reveal { flex: 1; display: flex; flex-direction: column; padding: 0 1.2rem 2rem; }
 .dist { display: flex; align-items: flex-end; justify-content: center; gap: 1rem; height: 32vh; min-height: 170px; width: min(760px, 100%); margin: 0 auto 1.4rem; }
-.dist__col { flex: 1; max-width: 150px; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; gap: 0.4rem; opacity: 0.55; }
+.dist__col { flex: 1; max-width: 150px; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; gap: 0.4rem; opacity: 0.62; }
 .dist__col.is-correct { opacity: 1; }
 .dist__count { color: #fff; font-weight: 800; font-size: 1.2rem; }
 .dist__bar { width: 100%; border-radius: 10px 10px 0 0; transition: height 0.5s ease; min-height: 6px; }
@@ -694,14 +694,24 @@ button { font-family: inherit; }
 .dist__bar[data-color="1"] { background: var(--opt-2); }
 .dist__bar[data-color="2"] { background: var(--opt-3); }
 .dist__bar[data-color="3"] { background: var(--opt-4); }
-/* Marcador bajo cada barra: cuadrado del color de la opción */
-.dist__key { display: flex; align-items: center; gap: 0.35rem; }
-.dist__square { width: 20px; height: 20px; border-radius: 6px; background: currentColor; }
-.dist__square[data-color="0"] { color: var(--opt-1-lite); }
-.dist__square[data-color="1"] { color: var(--opt-2-lite); }
-.dist__square[data-color="2"] { color: var(--opt-3-lite); }
-.dist__square[data-color="3"] { color: var(--opt-4-lite); }
-.dist__check { color: #fff; font-weight: 800; }
+/* Etiqueta bajo cada barra con el TEXTO de la opción: replica el color del
+   botón de respuesta (pastel + texto negro) para reconocer qué opción es
+   cada barra. La correcta se resalta con un borde blanco y una marca ✓. */
+.dist__opt {
+  display: flex; align-items: center; justify-content: center; gap: 0.3rem;
+  width: 100%; min-height: 34px; padding: 0.35rem 0.55rem;
+  border-radius: 10px; color: var(--ink); font-weight: 800;
+  font-size: 0.95rem; line-height: 1.15; text-align: center;
+  overflow-wrap: anywhere;
+}
+.dist__opt[data-color="0"] { background: var(--opt-1); }
+.dist__opt[data-color="1"] { background: var(--opt-2); }
+.dist__opt[data-color="2"] { background: var(--opt-3); }
+.dist__opt[data-color="3"] { background: var(--opt-4); }
+.dist__opt--true { background: var(--tf-true); }
+.dist__opt--false { background: var(--tf-false); }
+.dist__opt--correct { box-shadow: 0 0 0 3px #fff, 0 6px 14px rgba(0, 0, 0, 0.25); }
+.dist__check { color: var(--success); font-weight: 900; flex: 0 0 auto; }
 
 /* Clasificación */
 .leaderboard { width: min(560px, 100%); margin: 0 auto; background: rgba(255, 255, 255, 0.1); border-radius: var(--radius-lg); padding: 1rem 1.2rem; }
@@ -768,6 +778,7 @@ button { font-family: inherit; }
 @media (max-width: 640px) {
   .lobby__pin { font-size: 2rem; }
   .dist { gap: 0.5rem; }
+  .dist__opt { font-size: 0.78rem; min-height: 30px; padding: 0.28rem 0.35rem; border-radius: 8px; }
   .player-pad .answer-btn { min-height: 15vh; }
 }
 
@@ -784,8 +795,6 @@ button { font-family: inherit; }
 /* Barras del gráfico de distribución en verdadero/falso */
 .dist__bar--true { background: var(--tf-true); }
 .dist__bar--false { background: var(--tf-false); }
-.dist__square--true { color: var(--tf-true); }
-.dist__square--false { color: var(--tf-false); }
 
 /* Jugador desconectado en la sala de espera */
 .player-chip.disconnected { opacity: 0.45; }
