@@ -62,6 +62,17 @@
     window.QuizHost.render(root, quiz, { onExit: goHome });
   }
 
+  /** Reportes de partidas (respuestas de los estudiantes). Solo el profe. */
+  function goReports() {
+    if (!authState.authenticated) { goTeacher(); return; }
+    setHash("reportes");
+    window.scrollTo(0, 0);
+    window.QuizReports.renderList(root, {
+      onExit: goHome,
+      onAuthError: function () { authState.authenticated = false; setHash("profesor"); renderTeacherLogin(); }
+    });
+  }
+
   function goJoin(pin, onExit) {
     window.scrollTo(0, 0);
     window.QuizPlayer.render(root, { pin: pin, onExit: onExit || goStudent });
@@ -370,6 +381,7 @@
         el("span", { class: "topbar__spacer" }),
         el("div", { class: "topbar__actions" }, [
           el("button", { class: "btn btn--sm topbar__exit", title: "Cerrar sesión de profesor/a", text: "Salir", onClick: logoutTeacher }),
+          el("button", { class: "btn btn--light btn--sm", text: "Reportes", title: "Ver las respuestas de tus estudiantes por partida", onClick: goReports }),
           el("button", { class: "btn btn--light btn--sm", text: "Importar", onClick: function () { importInput.click(); } }),
           el("button", { class: "btn btn--sm", text: "Crear", onClick: function () { goEditor(null); } })
         ]),
@@ -461,6 +473,7 @@
   /** Decide qué vista mostrar según el # de la URL y la sesión iniciada. */
   function route() {
     var hash = (window.location.hash || "").replace(/^#/, "").toLowerCase();
+    if (hash === "reportes" || hash === "reports") { if (authState.authenticated) { goReports(); } else { showTeacherArea(); } return; }
     if (hash === "profesor" || hash === "profe" || hash === "teacher") { showTeacherArea(); return; }
     if (hash === "jugar" || hash === "estudiante" || hash === "student") { renderStudent(); return; }
     // Sin # explícito: si ya hay sesión de profe, a su biblioteca; si no, al PIN.
@@ -495,5 +508,5 @@
   window.addEventListener("hashchange", route);
 
   // Exponer utilidades por si se quieren usar desde la consola
-  window.QuizApp = { goHome: goHome, goEditor: goEditor, goPlay: goPlay, goHostLive: goHostLive, goJoin: goJoin, goStudent: goStudent, goTeacher: goTeacher };
+  window.QuizApp = { goHome: goHome, goEditor: goEditor, goPlay: goPlay, goHostLive: goHostLive, goJoin: goJoin, goStudent: goStudent, goTeacher: goTeacher, goReports: goReports };
 })(window, document);

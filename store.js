@@ -16,8 +16,13 @@ const crypto = require("crypto");
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const DATA_FILE = path.join(DATA_DIR, "quizaula-data.json");
+// Reportes de las partidas (respuestas de cada estudiante). Cada reporte se
+// guarda en su propio archivo dentro de REPORTS_DIR y se conserva un máximo de
+// una semana para no cargar el servidor (se borra automáticamente al caducar).
+const REPORTS_DIR = path.join(DATA_DIR, "reports");
+const REPORT_TTL_MS = 7 * 24 * 60 * 60 * 1000; // una semana
 
-let data = { meta: {}, quizzes: [] };
+let data = { meta: {}, quizzes: [], reports: [] };
 
 /* ---------- Cuestionario de ejemplo (solo la primera vez) ---------- */
 function a(text, correct) { return { text: text, correct: !!correct }; }
@@ -62,11 +67,12 @@ function load() {
     const parsed = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
     data = {
       meta: parsed && parsed.meta ? parsed.meta : {},
-      quizzes: parsed && Array.isArray(parsed.quizzes) ? parsed.quizzes : []
+      quizzes: parsed && Array.isArray(parsed.quizzes) ? parsed.quizzes : [],
+      reports: parsed && Array.isArray(parsed.reports) ? parsed.reports : []
     };
     existed = true;
   } catch (e) {
-    data = { meta: {}, quizzes: [] };
+    data = { meta: {}, quizzes: [], reports: [] };
   }
 
   let changed = false;
@@ -75,6 +81,8 @@ function load() {
   // Primera vez: sembramos el cuestionario de ejemplo para no arrancar vacío.
   if (!existed && !data.meta.seeded) { data.quizzes.push(sampleQuiz()); data.meta.seeded = true; changed = true; }
   if (changed) persist();
+  // Al arrancar, borra los reportes que ya superaron la semana.
+  pruneReports();
 }
 
 /* ---------- Configuración (meta) ---------- */
@@ -107,10 +115,95 @@ function removeQuiz(id) {
 }
 function isEmpty() { return data.quizzes.length === 0; }
 
+/* ---------- Reportes de partidas (respuestas de los estudiantes) ---------- */
+function ensureReportsDir() {
+  try { fs.mkdirSync(REPORTS_DIR, { recursive: true }); } catch (e) {}
+}
+// Solo permitimos ids con estos caracteres (evita rutas maliciosas ../).
+function safeReportId(id) { return /^[A-Za-z0-9_-]+$/.test(String(id || "")); }
+function reportFile(id) { return path.join(REPORTS_DIR, id + ".json"); }
+
+/** Resumen ligero (para la lista) a partir de un reporte completo. */
+function reportSummary(report) {
+  return {
+    id: report.id,
+    pin: report.pin || "",
+    quizId: report.quizId || "",
+    quizTitle: report.quizTitle || "Cuestionario",
+    playedAt: report.playedAt || report.savedAt || 0,
+    finishedAt: report.finishedAt || 0,
+    savedAt: report.savedAt || 0,
+    participants: Array.isArray(report.participants) ? report.participants.length : 0,
+    questions: Array.isArray(report.questions) ? report.questions.length : 0
+  };
+}
+
+/** Guarda un reporte completo (un archivo por reporte) y su resumen en el índice. */
+function saveReport(report) {
+  if (!report || !Array.isArray(report.questions) || !report.questions.length) return null;
+  if (!Array.isArray(report.participants) || !report.participants.length) return null;
+  const now = Date.now();
+  report.id = "r_" + now.toString(36) + "_" + crypto.randomBytes(4).toString("hex");
+  report.savedAt = now;
+  ensureReportsDir();
+  try {
+    const tmp = reportFile(report.id) + ".tmp";
+    fs.writeFileSync(tmp, JSON.stringify(report));
+    fs.renameSync(tmp, reportFile(report.id));
+  } catch (e) { return null; }
+  data.reports.push(reportSummary(report));
+  persist();
+  return reportSummary(report);
+}
+
+/** Lista de resúmenes, del más reciente al más antiguo (tras podar caducados). */
+function listReports() {
+  pruneReports();
+  return data.reports.slice().sort((x, y) => (y.savedAt || 0) - (x.savedAt || 0));
+}
+
+/** Reporte completo por id (o null si no existe / caducó / id inválido). */
+function getReport(id) {
+  if (!safeReportId(id)) return null;
+  pruneReports();
+  try { return JSON.parse(fs.readFileSync(reportFile(id), "utf8")); }
+  catch (e) { return null; }
+}
+
+/** Borra un reporte (archivo + entrada del índice). */
+function deleteReport(id) {
+  if (!safeReportId(id)) return false;
+  const before = data.reports.length;
+  data.reports = data.reports.filter((r) => r.id !== id);
+  try { fs.unlinkSync(reportFile(id)); } catch (e) {}
+  const changed = data.reports.length !== before;
+  if (changed) persist();
+  return changed;
+}
+
+/** Elimina los reportes que superaron la semana (índice + archivo). */
+function pruneReports() {
+  if (!Array.isArray(data.reports)) { data.reports = []; return 0; }
+  const cutoff = Date.now() - REPORT_TTL_MS;
+  const keep = [];
+  let removed = 0;
+  data.reports.forEach((r) => {
+    if ((r.savedAt || 0) < cutoff) {
+      removed++;
+      if (safeReportId(r.id)) { try { fs.unlinkSync(reportFile(r.id)); } catch (e) {} }
+    } else {
+      keep.push(r);
+    }
+  });
+  if (removed) { data.reports = keep; persist(); }
+  return removed;
+}
+
 load();
 
 module.exports = {
   DATA_FILE,
   getMeta, setMeta,
-  allQuizzes, getQuiz, upsertQuiz, removeQuiz, isEmpty
+  allQuizzes, getQuiz, upsertQuiz, removeQuiz, isEmpty,
+  saveReport, listReports, getReport, deleteReport, pruneReports
 };

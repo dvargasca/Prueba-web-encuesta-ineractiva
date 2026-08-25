@@ -160,7 +160,7 @@
       textNode = el("input", {
         type: "text",
         value: a.text,
-        maxlength: 120,
+        maxlength: 500,
         placeholder: "Respuesta " + (aIndex + 1),
         "aria-label": "Texto de la respuesta " + (aIndex + 1),
         oninput: function (e) { a.text = e.target.value; }
@@ -237,7 +237,7 @@
       el("label", { text: "Enunciado" }),
       el("textarea", {
         class: "textarea",
-        maxlength: 300,
+        maxlength: 400,
         placeholder: "Escribe aquí la pregunta…",
         oninput: function (e) { q.text = e.target.value; }
       }, q.text)

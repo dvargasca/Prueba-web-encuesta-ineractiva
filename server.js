@@ -155,6 +155,24 @@ app.delete("/api/quizzes/:id", requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+/* ---------- Reportes de partidas (protegidos: solo el profe) ----------
+   Guardan las respuestas de cada estudiante por pregunta y sesión. Se
+   conservan una semana como máximo (limpieza automática en store.js). */
+app.get("/api/reports", requireAuth, (_req, res) => {
+  res.json({ reports: store.listReports() });
+});
+
+app.get("/api/reports/:id", requireAuth, (req, res) => {
+  const report = store.getReport(req.params.id);
+  if (!report) return res.status(404).json({ error: "Reporte no encontrado o caducado." });
+  res.json({ report: report });
+});
+
+app.delete("/api/reports/:id", requireAuth, (req, res) => {
+  store.deleteReport(req.params.id);
+  res.json({ ok: true });
+});
+
 // Sirve el frontend estático (index.html, css/, js/).
 app.use(express.static(__dirname));
 app.get("/salud", (_req, res) => res.json({ ok: true, partidas: games.size }));
@@ -245,6 +263,7 @@ function sendQuestion(game) {
     p.lastPoints = 0;
     p.lastBonus = 0;
     p.lastResult = null;
+    p.lastElapsedMs = null;
   });
 
   // Al anfitrión: pregunta completa (con imagen) pero SIN marcar la correcta.
@@ -289,6 +308,85 @@ function maybeRevealEarly(game) {
   }
 }
 
+/** Registra, en el revelado, la respuesta de cada jugador para el reporte. */
+function recordQuestionForReport(game, q, correctIndexes) {
+  const idx = game.currentIndex;
+  if (!game.reportQuestions.some((rq) => rq.index === idx)) {
+    game.reportQuestions.push({
+      index: idx,
+      text: q.text || "",
+      type: q.type || "multiple",
+      timeLimit: Number(q.timeLimit) || 20,
+      points: Number(q.points) || 1000,
+      answers: q.answers.map((a) => ({ text: a.text, correct: !!a.correct })),
+      correctIndexes: correctIndexes.slice(),
+    });
+  }
+  game.players.forEach((p) => {
+    let rec = game.reportByToken[p.token];
+    if (!rec) { rec = { name: p.name, responses: {} }; game.reportByToken[p.token] = rec; }
+    rec.name = p.name;
+    const answered = p.answered === true && p.answerIndex >= 0 && p.answerIndex < q.answers.length;
+    rec.responses[idx] = {
+      answered: answered,
+      answerIndex: answered ? p.answerIndex : -1,
+      answerText: answered ? (q.answers[p.answerIndex].text || "") : "",
+      correct: answered && p.answeredCorrectly === true,
+      points: p.lastPoints || 0,
+      timeMs: (answered && typeof p.lastElapsedMs === "number") ? p.lastElapsedMs : null,
+    };
+  });
+}
+
+/** Compila y guarda el reporte de la partida (una sola vez). Devuelve el resumen o null. */
+function finalizeReport(game) {
+  if (!game || game.reportSaved) return null;
+  if (!game.reportQuestions || !game.reportQuestions.length) return null;
+  const tokens = Object.keys(game.reportByToken);
+  if (!tokens.length) return null;
+
+  const scoreByToken = {};
+  game.players.forEach((p) => { scoreByToken[p.token] = p.score; });
+
+  const questions = game.reportQuestions.slice().sort((a, b) => a.index - b.index);
+  const participants = tokens.map((tk) => {
+    const rec = game.reportByToken[tk];
+    const answers = questions.map((qq) => {
+      const r = rec.responses[qq.index] || { answered: false, answerIndex: -1, answerText: "", correct: false, points: 0, timeMs: null };
+      return {
+        questionIndex: qq.index,
+        answered: !!r.answered,
+        answerIndex: r.answerIndex,
+        answerText: r.answerText,
+        correct: !!r.correct,
+        points: r.points || 0,
+        timeMs: (typeof r.timeMs === "number") ? r.timeMs : null,
+      };
+    });
+    return {
+      name: rec.name,
+      score: (typeof scoreByToken[tk] === "number") ? scoreByToken[tk] : 0,
+      correctCount: answers.filter((a) => a.correct).length,
+      answers: answers,
+    };
+  }).sort((a, b) => b.score - a.score);
+
+  const report = {
+    pin: game.pin,
+    quizId: (game.quiz && game.quiz.id) || "",
+    quizTitle: (game.quiz && game.quiz.title) || "Cuestionario",
+    playedAt: game.playedAt || Date.now(),
+    finishedAt: Date.now(),
+    questions: questions,
+    participants: participants,
+  };
+
+  let summary = null;
+  try { summary = store.saveReport(report); } catch (e) { summary = null; }
+  if (summary) { game.reportSaved = true; game.reportId = summary.id; }
+  return summary;
+}
+
 function revealQuestion(game) {
   if (game.state !== "question") return;
   game.state = "reveal";
@@ -297,6 +395,8 @@ function revealQuestion(game) {
   const q = game.quiz.questions[game.currentIndex];
   const correctIndexes = q.answers.map((a, i) => (a.correct ? i : -1)).filter((i) => i >= 0);
   const distribution = q.answers.map(() => 0);
+
+  recordQuestionForReport(game, q, correctIndexes);
 
   game.players.forEach((p) => {
     if (p.answered && p.answerIndex >= 0 && p.answerIndex < distribution.length) {
@@ -355,13 +455,20 @@ function endGame(game) {
   game.state = "ended";
   clearTimeout(game.timer);
   const full = leaderboard(game);
-  io.to(game.hostSocketId).emit("host:ended", { podium: full.slice(0, 5), total: full.length });
+  const summary = finalizeReport(game);
+  io.to(game.hostSocketId).emit("host:ended", {
+    podium: full.slice(0, 5),
+    total: full.length,
+    reportId: (summary && summary.id) || game.reportId || null,
+  });
   game.players.forEach((p) => emitToPlayer(p, "player:ended", endedPayloadFor(game, p.token)));
   // El juego permanece en memoria para permitir reconexiones hasta que el anfitrión salga.
 }
 
 function closeGame(game, reason) {
   clearTimeout(game.timer);
+  // Si ya se había jugado alguna pregunta, conserva el reporte antes de cerrar.
+  finalizeReport(game);
   game.players.forEach((p) => {
     if (p.removalTimer) clearTimeout(p.removalTimer);
     emitToPlayer(p, "game:closed", { reason: reason || "La partida se cerró." });
@@ -417,6 +524,12 @@ io.on("connection", (socket) => {
       timer: null,
       answeredCount: 0,
       questionStartTs: 0,
+      // Reporte de la partida: se va rellenando en cada revelado y se guarda al final.
+      playedAt: 0,
+      reportQuestions: [],   // meta de cada pregunta jugada
+      reportByToken: {},     // token -> { name, responses: { qIndex: {...} } }
+      reportSaved: false,
+      reportId: null,
     };
     games.set(pin, game);
     socket.data.role = "host";
@@ -434,6 +547,7 @@ io.on("connection", (socket) => {
       return;
     }
     game.currentIndex = -1;
+    if (!game.playedAt) game.playedAt = Date.now();
     nextQuestion(game);
   });
 
@@ -546,6 +660,7 @@ io.on("connection", (socket) => {
     player.answered = true;
     player.answerIndex = index;
     player.answeredCorrectly = correct;
+    player.lastElapsedMs = elapsed;
     if (correct) {
       player.streak = (player.streak || 0) + 1;
       const base = scoreFor(q.points, timeLimitMs, elapsed);
@@ -604,6 +719,9 @@ io.on("connection", (socket) => {
 /* =========================================================
    Arranque
    ========================================================= */
+// Poda periódica de reportes caducados (por si el servidor lleva días activo).
+setInterval(() => { try { store.pruneReports(); } catch (e) {} }, 6 * 60 * 60 * 1000).unref();
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log("QuizAula escuchando en http://localhost:" + PORT);

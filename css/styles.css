@@ -1,9 +1,10 @@
 /* =========================================================
    QuizAula — Estilos
    Identidad propia: fondo neutro profundo (índigo/pizarra) para que
-   las opciones resalten (figura-fondo) y cuatro colores de opción muy
-   separados en tono, elegidos con criterios de gamificación y contraste
-   WCAG. Las opciones se distinguen por el COLOR (cuadrados), sin figuras
+   las opciones resalten (figura-fondo). Las cuatro respuestas usan
+   colores PASTEL con TEXTO NEGRO (var(--ink)), separados en matiz para
+   distinguirse bien y con una estética suave y de alto contraste. Las
+   opciones se distinguen por el COLOR (cuadrados), sin figuras
    geométricas ni emojis. Totalmente responsivo.
    ========================================================= */
 
@@ -14,24 +15,32 @@
   --brand-500: #32409a;
   --brand-300: #8290ea;
 
-  /* Colores de las 4 opciones — tonos separados ~90° para máxima
-     distinción, con contraste suficiente para el texto encima.
-     El ámbar (opción 3) usa texto oscuro; el resto, texto blanco. */
-  --opt-1: #c81d5a; /* frambuesa */
-  --opt-2: #2d5bd6; /* cobalto   */
-  --opt-3: #e8590c; /* ámbar     */
-  --opt-4: #0e8a6e; /* esmeralda */
+  /* Colores de las 4 opciones — tonos PASTEL separados en matiz para
+     distinguir bien cada respuesta. Siempre llevan TEXTO NEGRO encima
+     (var(--ink)); son claros, así que el contraste es muy alto. */
+  --opt-1: #f3a8c4; /* rosa pastel    */
+  --opt-2: #aec6f5; /* azul pastel    */
+  --opt-3: #f7cd9b; /* durazno pastel */
+  --opt-4: #a8e0c2; /* menta pastel   */
 
-  --opt-1-dark: #9e1547;
-  --opt-2-dark: #2447ab;
-  --opt-3-dark: #bc470a;
-  --opt-4-dark: #0a6b55;
+  /* Tono algo más intenso del mismo matiz para el relieve inferior (sombra 3D) */
+  --opt-1-dark: #de88a8;
+  --opt-2-dark: #86a6e6;
+  --opt-3-dark: #e8ab6d;
+  --opt-4-dark: #7ec8a2;
 
-  /* Versiones luminosas para marcadores sobre fondo oscuro (gráfico) */
-  --opt-1-lite: #f0679b;
-  --opt-2-lite: #6e93f0;
-  --opt-3-lite: #f5a04d;
-  --opt-4-lite: #3cc9a5;
+  /* Versiones aún más claras para los marcadores del gráfico (fondo oscuro) */
+  --opt-1-lite: #f7c1d6;
+  --opt-2-lite: #c6d7f8;
+  --opt-3-lite: #f9dcb4;
+  --opt-4-lite: #c2e8d3;
+
+  /* Pastel para verdadero/falso (se conservan --success/--danger para
+     botones, avisos y toasts). También con texto negro encima. */
+  --tf-true: #a5dfba;   /* verde pastel */
+  --tf-true-dark: #7cc79f;
+  --tf-false: #f4abb2;  /* coral pastel */
+  --tf-false-dark: #e6868f;
 
   /* Neutros */
   --ink: #20233b;
@@ -150,8 +159,8 @@ button { font-family: inherit; }
   width: 40px; height: 40px; border-radius: 11px;
   background: linear-gradient(135deg, var(--opt-1), var(--opt-2));
   display: grid; place-items: center;
-  font-size: 1.2rem; font-weight: 800; color: #fff;
-  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.18);
+  font-size: 1.2rem; font-weight: 800; color: var(--ink);
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,0.12);
 }
 
 /* =========================================================
@@ -335,6 +344,15 @@ button { font-family: inherit; }
 .cover-accent--3 { background: linear-gradient(135deg, var(--opt-3), var(--opt-3-dark)); }
 .cover-accent--4 { background: linear-gradient(135deg, var(--opt-4), var(--opt-4-dark)); }
 .cover-accent--5 { background: linear-gradient(135deg, var(--opt-2), var(--opt-1)); }
+/* Monograma legible sobre la portada: NEGRO en las portadas pastel (1–5)
+   y BLANCO sobre la portada de marca oscura (0). Se aplica tanto al texto
+   directo (vista previa / juego) como al monograma hijo de la tarjeta. */
+.cover-accent--1, .cover-accent--2, .cover-accent--3,
+.cover-accent--4, .cover-accent--5 { color: var(--ink); }
+.cover-accent--0 { color: #fff; }
+.cover-accent--1 .quiz-card__mono, .cover-accent--2 .quiz-card__mono,
+.cover-accent--3 .quiz-card__mono, .cover-accent--4 .quiz-card__mono,
+.cover-accent--5 .quiz-card__mono { color: var(--ink); text-shadow: none; }
 
 /* Tarjeta de pregunta en el editor */
 .q-card {
@@ -362,28 +380,29 @@ button { font-family: inherit; }
 .answer-edit {
   display: flex; align-items: center; gap: 0.55rem;
   border-radius: var(--radius); padding: 0.5rem 0.6rem;
-  color: #fff;
+  color: var(--ink);
 }
 .answer-edit[data-color="0"] { background: var(--opt-1); }
 .answer-edit[data-color="1"] { background: var(--opt-2); }
-.answer-edit[data-color="2"] { background: var(--opt-3); color: var(--ink); }
+.answer-edit[data-color="2"] { background: var(--opt-3); }
 .answer-edit[data-color="3"] { background: var(--opt-4); }
-.answer-edit.answer-edit--true { background: var(--success); color: #fff; }
-.answer-edit.answer-edit--false { background: var(--danger); color: #fff; }
+.answer-edit.answer-edit--true { background: var(--tf-true); color: var(--ink); }
+.answer-edit.answer-edit--false { background: var(--tf-false); color: var(--ink); }
 .answer-edit input[type="text"] {
   flex: 1; border: none; background: rgba(255,255,255,0.94); color: var(--ink);
   border-radius: 8px; padding: 0.5rem 0.6rem; font-size: 0.95rem; min-width: 0;
 }
-.answer-edit input[type="text"]:focus { outline: 2px solid rgba(255,255,255,0.9); }
+.answer-edit input[type="text"]:focus { outline: 2px solid rgba(0,0,0,0.35); }
 .answer-edit .correct-toggle {
   display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.8rem;
   font-weight: 700; cursor: pointer; white-space: nowrap; user-select: none;
 }
 .answer-edit .correct-toggle input { width: 18px; height: 18px; accent-color: var(--brand-700); cursor: pointer; }
 .answer-edit .remove-answer {
-  background: rgba(0,0,0,0.2); border: none; color: #fff; border-radius: 6px;
+  background: rgba(0,0,0,0.14); border: none; color: var(--ink); border-radius: 6px;
   width: 26px; height: 26px; cursor: pointer; flex-shrink: 0; font-size: 0.9rem;
 }
+.answer-edit .remove-answer:hover { background: rgba(0,0,0,0.24); }
 
 .q-image-preview { margin-top: 0.6rem; }
 .q-image-preview img { max-height: 130px; border-radius: var(--radius); display: block; }
@@ -438,8 +457,10 @@ button { font-family: inherit; }
   width: 88px; height: 88px; margin: 0 auto 0.6rem; border-radius: 22px;
   background: linear-gradient(135deg, var(--brand-500), var(--brand-700));
   display: grid; place-items: center;
-  font-size: 2.6rem; font-weight: 800; color: #fff;
+  font-size: 2.6rem; font-weight: 800;
   box-shadow: var(--shadow);
+  /* El color del texto lo define la clase cover-accent--N (siempre presente):
+     negro sobre portadas pastel, blanco sobre la portada de marca oscura. */
 }
 /* Icono/insignia genérica de las pantallas de estado (conexión, espera…) */
 .status-badge {
@@ -485,7 +506,7 @@ button { font-family: inherit; }
   margin: auto auto 0;
 }
 .answer-btn {
-  border: none; cursor: pointer; color: #fff;
+  border: none; cursor: pointer; color: var(--ink);
   font-size: clamp(1rem, 2.4vw, 1.4rem); font-weight: 700;
   padding: 1.3rem 1.2rem; border-radius: var(--radius);
   display: flex; align-items: center; gap: 0.9rem; text-align: left;
@@ -497,7 +518,7 @@ button { font-family: inherit; }
 .answer-btn .label { flex: 1; }
 .answer-btn[data-color="0"] { background: var(--opt-1); box-shadow: 0 5px 0 var(--opt-1-dark); }
 .answer-btn[data-color="1"] { background: var(--opt-2); box-shadow: 0 5px 0 var(--opt-2-dark); }
-.answer-btn[data-color="2"] { background: var(--opt-3); box-shadow: 0 5px 0 var(--opt-3-dark); color: var(--ink); }
+.answer-btn[data-color="2"] { background: var(--opt-3); box-shadow: 0 5px 0 var(--opt-3-dark); }
 .answer-btn[data-color="3"] { background: var(--opt-4); box-shadow: 0 5px 0 var(--opt-4-dark); }
 .answer-btn:not(:disabled):hover { filter: brightness(1.05); }
 .answer-btn:not(:disabled):active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,0.22); }
@@ -542,8 +563,8 @@ button { font-family: inherit; }
 .result-badge span { font-size: 2rem; font-weight: 800; line-height: 1; }
 .result-badge--great { background: linear-gradient(135deg, var(--gold), #c99500); }
 .result-badge--good  { background: linear-gradient(135deg, var(--success), #0c6f4d); }
-.result-badge--ok    { background: linear-gradient(135deg, var(--opt-2), var(--opt-2-dark)); }
-.result-badge--low   { background: linear-gradient(135deg, var(--opt-1), var(--opt-1-dark)); }
+.result-badge--ok    { background: linear-gradient(135deg, var(--opt-2), var(--opt-2-dark)); color: var(--ink); }
+.result-badge--low   { background: linear-gradient(135deg, var(--opt-1), var(--opt-1-dark)); color: var(--ink); }
 .results__score { font-size: 3rem; font-weight: 800; color: var(--brand-700); margin: 0.2rem 0; }
 .results__msg { color: var(--ink-soft); font-size: 1.1rem; margin-bottom: 0.5rem; }
 .results__stats { display: flex; justify-content: center; gap: 1.5rem; margin: 1.2rem 0; flex-wrap: wrap; }
@@ -717,7 +738,7 @@ button { font-family: inherit; }
 .player-pad { width: min(620px, 100%); margin: 0.6rem auto; padding: 0 1rem 1.5rem; }
 .player-pad .answer-btn { min-height: 17vh; font-size: 1.3rem; }
 .answer-btn.dimmed { opacity: 0.35; }
-.answer-btn.is-picked { outline: 4px solid #fff; outline-offset: -4px; }
+.answer-btn.is-picked { outline: 4px solid var(--ink); outline-offset: -4px; }
 
 .player-result { flex: 1; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
 .result-card { border-radius: var(--radius-lg); padding: 2rem 1.5rem; text-align: center; color: #fff; width: min(420px, 100%); box-shadow: var(--shadow-lg); animation: pop 0.3s ease; }
@@ -755,16 +776,16 @@ button { font-family: inherit; }
    ========================================================= */
 
 /* Botones de verdadero/falso (verde = verdadero, rojo = falso) */
-.answer-btn--true { background: var(--success); box-shadow: 0 5px 0 #0c6f4d; color: #fff; }
-.answer-btn--false { background: var(--danger); box-shadow: 0 5px 0 #b21f3c; color: #fff; }
+.answer-btn--true { background: var(--tf-true); box-shadow: 0 5px 0 var(--tf-true-dark); color: var(--ink); }
+.answer-btn--false { background: var(--tf-false); box-shadow: 0 5px 0 var(--tf-false-dark); color: var(--ink); }
 .answers-play--tf .answer-btn { justify-content: center; font-size: clamp(1.2rem, 3vw, 1.7rem); }
 .answers-play--tf .answer-btn .label { flex: 0 1 auto; }
 
 /* Barras del gráfico de distribución en verdadero/falso */
-.dist__bar--true { background: var(--success); }
-.dist__bar--false { background: var(--danger); }
-.dist__square--true { color: var(--opt-4-lite); }
-.dist__square--false { color: var(--opt-1-lite); }
+.dist__bar--true { background: var(--tf-true); }
+.dist__bar--false { background: var(--tf-false); }
+.dist__square--true { color: var(--tf-true); }
+.dist__square--false { color: var(--tf-false); }
 
 /* Jugador desconectado en la sala de espera */
 .player-chip.disconnected { opacity: 0.45; }
@@ -784,6 +805,54 @@ button { font-family: inherit; }
 /* Enlace para configurar el servidor del modo en vivo (pie del inicio) */
 .server-link { color: var(--brand-500); font-weight: 600; text-decoration: underline; cursor: pointer; }
 .server-link:hover { color: var(--brand-700); }
+
+/* =========================================================
+   REPORTES DE PARTIDAS (respuestas de los estudiantes)
+   ========================================================= */
+.report-page { padding: 1.5rem 0 3rem; }
+.report-page__head { display: flex; align-items: baseline; gap: 0.8rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.report-page__head h2 { color: var(--ink); margin: 0; font-size: 1.5rem; }
+.report-page .hint { color: var(--ink-soft); font-size: 0.85rem; }
+
+/* Lista de sesiones guardadas */
+.report-list { display: flex; flex-direction: column; gap: 0.7rem; }
+.report-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 0.9rem 1.1rem; flex-wrap: wrap; box-shadow: var(--shadow-sm);
+}
+.report-row__title { margin: 0; font-size: 1.1rem; color: var(--ink); }
+.report-row__sub { margin: 0.15rem 0 0; color: var(--ink-soft); font-size: 0.85rem; }
+.report-row__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+/* Detalle: cabecera + tabla participante × pregunta */
+.report-detail__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.report-detail__head h2 { color: var(--ink); }
+.report-detail h3 { color: var(--ink); }
+
+.report-table-wrap {
+  overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--paper); box-shadow: var(--shadow-sm); -webkit-overflow-scrolling: touch;
+}
+.report-table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+.report-table th, .report-table td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--border); text-align: center; white-space: nowrap; }
+.report-table thead th { position: sticky; top: 0; background: var(--brand-700); color: #fff; font-weight: 700; z-index: 1; }
+.report-th--name, .report-td--name { text-align: left; }
+.report-td--name { font-weight: 700; color: var(--ink); }
+.report-td--rank { color: var(--ink-soft); }
+.report-th--q { cursor: help; }
+
+/* Celdas de respuesta: pastel + letra negra (a juego con las respuestas) */
+.report-cell { text-align: left; }
+.report-cell--ok { background: var(--tf-true); color: var(--ink); }
+.report-cell--no { background: var(--tf-false); color: var(--ink); }
+.report-cell--none { color: var(--ink-soft); text-align: center; }
+.report-cell__txt { display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+
+/* Leyenda de preguntas */
+.report-legend { margin: 0.4rem 0 0; padding-left: 1.3rem; color: var(--ink); font-size: 0.9rem; line-height: 1.6; }
+.report-legend__q { font-weight: 700; }
+.report-legend__ok { color: var(--success); font-weight: 600; }
 
 /* Reduce animaciones si el usuario lo prefiere */
 @media (prefers-reduced-motion: reduce) {
